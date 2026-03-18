@@ -570,6 +570,26 @@ function App() {
     updateLastRead();
   }, [user, selectedChatUser]);
 
+  // Handle hardware back button for chat and settings
+  useEffect(() => {
+    const handlePopState = () => {
+      if (selectedChatUser) {
+        setSelectedChatUser(null);
+      } else if (showSettings) {
+        setShowSettings(false);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [selectedChatUser, showSettings]);
+
+  useEffect(() => {
+    if ((selectedChatUser || showSettings) && window.history.state?.modalOpen !== true) {
+      window.history.pushState({ modalOpen: true }, '');
+    }
+  }, [selectedChatUser !== null, showSettings]);
+
   const handleOnboardingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -1639,7 +1659,7 @@ function App() {
                     <h3 className="text-2xl font-serif text-[#D4A373]">Settings</h3>
                     <div className="flex items-center gap-3">
                       <button onClick={openEditProfile} className="text-[10px] font-bold uppercase tracking-widest text-[#E86B6B] bg-[#FFF5F5] px-3 py-1 rounded-lg border border-[#FFD7D7]">Edit Profile</button>
-                      <button onClick={() => setShowSettings(false)} className="text-[#8C8970]">✕</button>
+                      <button onClick={() => window.history.back()} className="text-[#8C8970]">✕</button>
                     </div>
                   </div>
 
@@ -1769,7 +1789,7 @@ function App() {
                 <div className="pt-12 pb-4 px-6 border-b border-[#FFD7D7] flex justify-between items-center bg-white shadow-sm">
                   <div className="flex items-center gap-3">
                     <button 
-                      onClick={() => setSelectedChatUser(null)} 
+                      onClick={() => window.history.back()} 
                       className="p-2 -ml-2 text-[#8C8970] hover:text-[#E86B6B] transition-colors"
                     >
                       <ArrowLeft size={24} />
