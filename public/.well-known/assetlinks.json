@@ -1,11 +1,13 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
-      "package_name": "app.vercel.amourkompass.twa",
+      "package_name": "app.vercel.amourcompass.twa",
       "sha256_cert_fingerprints": [
-        "C8:46:D5:D0:B6:AE:CA:58:9E:65:82:76:17:78:F6:BF:B3:79:88:9E:C9:79:62:71:5B:7C:EA:48:06:B8:08:29"
+        "DD:FF:68:AC:07:32:F2:27:26:2F:6F:C8:BD:DD:91:56:EF:F4:A4:02:C4:BA:97:B6:9A:7F:40:A7:3B:59:69:87"
       ]
     }
   }
