@@ -204,7 +204,7 @@ function App() {
   const [onboardingData, setOnboardingData] = useState({
     name: '',
     country: 'United States',
-    origin: '',
+    language: 'English',
     gender: 'Male',
     age: 13,
     zodiac: 'Aries',
@@ -217,7 +217,7 @@ function App() {
       setOnboardingData({
         name: userData.name || '',
         country: userData.country || 'United States',
-        origin: userData.origin || '',
+        language: userData.language || 'English',
         gender: userData.gender || 'Male',
         age: userData.age || 13,
         zodiac: userData.zodiac || 'Aries',
@@ -585,10 +585,25 @@ function App() {
   }, [selectedChatUser, showSettings]);
 
   useEffect(() => {
-    if ((selectedChatUser || showSettings) && window.history.state?.modalOpen !== true) {
+    const isAnyModalOpen = selectedChatUser !== null || showSettings;
+    if (isAnyModalOpen && window.history.state?.modalOpen !== true) {
       window.history.pushState({ modalOpen: true }, '');
     }
   }, [selectedChatUser !== null, showSettings]);
+
+  const closeSettings = () => {
+    setShowSettings(false);
+    if (window.history.state?.modalOpen) {
+      window.history.back();
+    }
+  };
+
+  const closeChat = () => {
+    setSelectedChatUser(null);
+    if (window.history.state?.modalOpen) {
+      window.history.back();
+    }
+  };
 
   const handleOnboardingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1062,8 +1077,8 @@ function App() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Origin</label>
-                  <input value={onboardingData.origin} onChange={e => setOnboardingData({...onboardingData, origin: e.target.value})} className="w-full p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" />
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Language</label>
+                  <input value={onboardingData.language} onChange={e => setOnboardingData({...onboardingData, language: e.target.value})} className="w-full p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" placeholder="e.g. English, Spanish" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -1659,7 +1674,7 @@ function App() {
                     <h3 className="text-2xl font-serif text-[#D4A373]">Settings</h3>
                     <div className="flex items-center gap-3">
                       <button onClick={openEditProfile} className="text-[10px] font-bold uppercase tracking-widest text-[#E86B6B] bg-[#FFF5F5] px-3 py-1 rounded-lg border border-[#FFD7D7]">Edit Profile</button>
-                      <button onClick={() => window.history.back()} className="text-[#8C8970]">✕</button>
+                      <button onClick={closeSettings} className="text-[#8C8970]">✕</button>
                     </div>
                   </div>
 
@@ -1722,8 +1737,8 @@ function App() {
                           <div className="text-xs font-medium text-[#4A4A3A]">{userData?.country || 'N/A'}</div>
                         </div>
                         <div className="p-3 bg-[#FFF5F5]/50 rounded-xl border border-[#FFD7D7]">
-                          <div className="text-[8px] uppercase text-[#8C8970] font-bold">Origin</div>
-                          <div className="text-xs font-medium text-[#4A4A3A]">{userData?.origin || 'N/A'}</div>
+                          <div className="text-[8px] uppercase text-[#8C8970] font-bold">Language</div>
+                          <div className="text-xs font-medium text-[#4A4A3A]">{userData?.language || 'N/A'}</div>
                         </div>
                       </div>
                     </div>
@@ -1789,7 +1804,7 @@ function App() {
                 <div className="pt-12 pb-4 px-6 border-b border-[#FFD7D7] flex justify-between items-center bg-white shadow-sm">
                   <div className="flex items-center gap-3">
                     <button 
-                      onClick={() => window.history.back()} 
+                      onClick={closeChat} 
                       className="p-2 -ml-2 text-[#8C8970] hover:text-[#E86B6B] transition-colors"
                     >
                       <ArrowLeft size={24} />
