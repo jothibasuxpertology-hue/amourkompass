@@ -610,7 +610,7 @@ function App() {
     if (!user) return;
     
     if (onboardingData.age < 13) {
-      alert("You must be at least 13 years old to use Amour Kompass.");
+      alert("You must be at least 13 years old to use Amour Compass.");
       return;
     }
 
@@ -975,7 +975,7 @@ function App() {
               <Heart size={48} className="text-[#E86B6B]" fill="#E86B6B" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-5xl font-serif text-[#D4A373]">Amour <span className="italic text-[#E86B6B]">Kompass</span></h1>
+              <h1 className="text-5xl font-serif text-[#D4A373]">Amour <span className="italic text-[#E86B6B]">Compass</span></h1>
               <p className="text-[#8C8970] font-light tracking-widest uppercase text-xs">Find your destiny</p>
             </div>
             <button 
@@ -1021,7 +1021,7 @@ function App() {
                 animate={{ y: 0 }}
                 className="text-6xl md:text-8xl font-serif text-[#D4A373] drop-shadow-sm"
               >
-                Amour <span className="italic text-[#E86B6B]">Kompass</span>
+                Amour <span className="italic text-[#E86B6B]">Compass</span>
               </motion.h1>
             </div>
 
@@ -1288,7 +1288,7 @@ function App() {
                   <MapPin size={12} />
                   {location ? `${location.lat.toFixed(3)}, ${location.lng.toFixed(3)}` : "Locating..."}
                 </div>
-                <h1 className="text-3xl font-serif text-[#D4A373]">Amour <span className="italic text-[#E86B6B]">Kompass</span></h1>
+                <h1 className="text-3xl font-serif text-[#D4A373]">Amour <span className="italic text-[#E86B6B]">Compass</span></h1>
               </div>
               <div className="flex gap-2">
                 <div className="flex bg-white rounded-2xl p-1 shadow-sm border border-[#FFD7D7]">

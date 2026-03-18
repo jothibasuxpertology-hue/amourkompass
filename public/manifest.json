@@ -1,6 +1,6 @@
 {
-  "name": "Amour Kompass",
-  "short_name": "Amour Kompass",
+  "name": "Amour Compass",
+  "short_name": "Amour Compass",
   "description": "Find your soulmate with a real-time collaborative compass.",
   "start_url": "/",
   "display": "standalone",
