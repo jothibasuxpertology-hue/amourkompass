@@ -1,0 +1,158 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (Firebase Auth UID)
+    // Fields:
+    //   - uid: string (required)
+    //   - name: string (required)
+    //   - country: string (required)
+    //   - origin: string (optional)
+    //   - gender: string (required)
+    //   - age: number (required)
+    //   - zodiac: string (required)
+    //   - targetCountry: string (required)
+    //   - username: string (optional)
+    //   - heading: number (optional)
+    //   - location: map (optional)
+    //   - lastSeen: timestamp (required)
+    //   - relationshipType: string (optional)
+    //
+    // Collection: usernames
+    // Document ID: {username} (lowercase string)
+    // Fields:
+    //   - uid: string (required) - The UID associated with this username
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "lingasamyharivignesh@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidLocation(loc) {
+      return loc == null || (
+        loc is map &&
+        loc.keys().hasAll(['lat', 'lng']) &&
+        loc.lat is number && loc.lng is number
+      );
+    }
+
+    function isValidUsername(username) {
+      return username is string && username.size() >= 3 && username.size() <= 30 &&
+             username.matches("^[a-z0-9_]+$");
+    }
+
+    function isValidMessage(data) {
+      return hasRequiredFields(['senderId', 'receiverId', 'timestamp', 'type']) &&
+             data.senderId is string && data.receiverId is string &&
+             data.timestamp is timestamp &&
+             data.type in ['text', 'emoji'] &&
+             (data.type == 'text' ? (data.text is string && data.text.trim().size() > 0 && data.text.size() <= 1000) : true) &&
+             (data.type == 'emoji' ? (data.emoji is string && data.emoji.size() > 0 && data.emoji.size() <= 10) : true);
+    }
+
+    function isCorrectChatId(chatId, uid1, uid2) {
+      return chatId == (uid1 < uid2 ? uid1 + "_" + uid2 : uid2 + "_" + uid1);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'name', 'country', 'gender', 'age', 'zodiac', 'targetCountry', 'lastSeen']) &&
+             data.uid == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.country is string && data.gender is string &&
+             data.age is number && data.age >= 18 && data.age <= 120 &&
+             data.zodiac is string && data.targetCountry is string &&
+             data.lastSeen is timestamp &&
+             (data.get('username', null) == null || isValidUsername(data.username)) &&
+             (data.get('heading', 0) is number) &&
+             isValidLocation(data.get('location', null)) &&
+             (data.get('relationshipType', 'friend') in ['friend', 'love']) &&
+             (data.get('lookingForLove', false) is bool) &&
+             (data.get('friends', []) is list) &&
+             (data.get('loves', []) is list);
+    }
+
+    match /users/{userId} {
+      // Users can read any profile to find friends by ID or see their status
+      allow read: if isAuthenticated();
+
+      // Users can only create/update their own profile
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && resource != null && 
+                    isValidUser(request.resource.data) &&
+                    request.resource.data.uid == resource.data.uid; // UID is immutable
+      
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+
+    match /usernames/{username} {
+      // Anyone can read to check availability or lookup UID
+      allow read: if isAuthenticated();
+      
+      // Only the user who owns the UID can claim the username
+      // and only if it doesn't already exist
+      allow create: if isAuthenticated() && 
+                    request.resource.data.uid == request.auth.uid &&
+                    isValidUsername(username) &&
+                    !exists(/databases/$(database)/documents/usernames/$(username));
+                    
+      // Users can delete their own username mapping
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    match /chats/{chatId} {
+      // Allow read if user is a participant
+      allow read: if isAuthenticated() && 
+                    (chatId.matches(".*" + request.auth.uid + ".*") || 
+                     (resource != null && request.auth.uid in resource.data.participants));
+      
+      // Allow write if user is a participant and data is valid
+      allow write: if isAuthenticated() && 
+                     chatId.matches(".*" + request.auth.uid + ".*") &&
+                     request.resource.data.participants.hasAll([request.auth.uid]);
+    }
+
+    match /chats/{chatId}/messages/{messageId} {
+      // Allow read if user is part of the chatId
+      allow read: if isAuthenticated() && 
+                    chatId.matches(".*" + request.auth.uid + ".*");
+      
+      // Allow create if user is sender and data is valid
+      allow create: if isAuthenticated() && 
+                      isValidMessage(request.resource.data) &&
+                      request.resource.data.senderId == request.auth.uid &&
+                      request.resource.data.timestamp == request.time &&
+                      isCorrectChatId(chatId, request.resource.data.senderId, request.resource.data.receiverId) &&
+                      exists(/databases/$(database)/documents/users/$(request.resource.data.receiverId));
+    }
+  }
+}

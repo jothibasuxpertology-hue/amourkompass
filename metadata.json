@@ -1,0 +1,7 @@
+{
+  "name": "Amour Kompass",
+  "description": "A real-time collaborative compass that points you toward your friends and soulmates. Features unique usernames, live location syncing, and beautiful animations.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

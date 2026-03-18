@@ -1,0 +1,98 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the soulmate compass app with their profile and current state.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "username": { "type": "string" },
+        "country": { "type": "string" },
+        "origin": { "type": "string" },
+        "gender": { "type": "string" },
+        "age": { "type": "number" },
+        "zodiac": { "type": "string" },
+        "targetCountry": { "type": "string" },
+        "heading": { "type": "number" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "lastSeen": { "type": "string", "format": "date-time" },
+        "relationshipType": { "type": "string", "enum": ["friend", "love"] },
+        "lookingForLove": { "type": "boolean", "description": "Whether the user is actively looking for a romantic connection." },
+        "friends": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of UIDs added as friends."
+        },
+        "loves": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of UIDs added as love interests."
+        }
+      },
+      "required": ["uid", "name", "country", "gender", "age", "zodiac", "targetCountry", "lastSeen"]
+    },
+    "UsernameMapping": {
+      "title": "Username Mapping",
+      "description": "Mapping of usernames to UIDs for uniqueness and lookup.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The UID associated with this username." }
+      },
+      "required": ["uid"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A message sent between users.",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "text": { "type": "string" },
+        "type": { "type": "string", "enum": ["text", "emoji"] },
+        "emoji": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "receiverId", "timestamp"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "A chat session between two users.",
+      "type": "object",
+      "properties": {
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "lastMessage": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "lastRead": { 
+          "type": "object", 
+          "description": "Map of userId to timestamp of when they last read the chat." 
+        }
+      },
+      "required": ["participants", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Stores user state for real-time compass syncing."
+    },
+    "/usernames/{username}": {
+      "schema": "UsernameMapping",
+      "description": "Mapping of usernames to UIDs for uniqueness and lookup."
+    },
+    "/chats/{chatId}": {
+      "schema": "Chat",
+      "description": "Metadata for a chat session."
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages in a chat between two users. chatId is usually sorted_uid1_uid2."
+    }
+  }
+}
