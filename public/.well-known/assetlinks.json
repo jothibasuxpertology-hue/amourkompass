@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.amourkompass.twa",
+      "package_name": "app.vercel.amourkompass.twa",
       "sha256_cert_fingerprints": [
-        "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
+        "C8:46:D5:D0:B6:AE:CA:58:9E:65:82:76:17:78:F6:BF:B3:79:88:9E:C9:79:62:71:5B:7C:EA:48:06:B8:08:29"
       ]
     }
   }
