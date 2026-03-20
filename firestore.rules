@@ -71,9 +71,11 @@ service cloud.firestore {
       return hasRequiredFields(['senderId', 'receiverId', 'timestamp', 'type']) &&
              data.senderId is string && data.receiverId is string &&
              data.timestamp is timestamp &&
-             data.type in ['text', 'emoji'] &&
+             data.type in ['text', 'emoji', 'card_request', 'card_generated'] &&
              (data.type == 'text' ? (data.text is string && data.text.trim().size() > 0 && data.text.size() <= 1000) : true) &&
-             (data.type == 'emoji' ? (data.emoji is string && data.emoji.size() > 0 && data.emoji.size() <= 10) : true);
+             (data.type == 'emoji' ? (data.emoji is string && data.emoji.size() > 0 && data.emoji.size() <= 10) : true) &&
+             (data.type == 'card_request' ? (data.get('cardType', 'friendship') in ['soulmate', 'friendship'] && data.get('status', 'pending') in ['pending', 'accepted', 'declined']) : true) &&
+             (data.type == 'card_generated' ? (data.get('cardType', 'friendship') in ['soulmate', 'friendship']) : true);
     }
 
     function isCorrectChatId(chatId, uid1, uid2) {
@@ -153,6 +155,13 @@ service cloud.firestore {
                       request.resource.data.timestamp == request.time &&
                       isCorrectChatId(chatId, request.resource.data.senderId, request.resource.data.receiverId) &&
                       exists(/databases/$(database)/documents/users/$(request.resource.data.receiverId));
+
+      // Allow update for card_request status
+      allow update: if isAuthenticated() &&
+                      resource.data.type == 'card_request' &&
+                      resource.data.receiverId == request.auth.uid &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+                      request.resource.data.status in ['accepted', 'declined'];
     }
   }
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, Component } from 'react';
 import { motion, AnimatePresence, useSpring } from 'motion/react';
-import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft } from 'lucide-react';
+import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft, Download, Share2, Check, XCircle, ShieldCheck } from 'lucide-react';
+import { toPng } from 'html-to-image';
 import { auth, db } from './firebase';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, setDoc, getDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, updateDoc, addDoc, orderBy, limit } from 'firebase/firestore';
@@ -56,6 +57,91 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
+
+// Connection Card Component
+const ConnectionCard = ({ 
+  type, 
+  user1, 
+  user2, 
+  cardRef 
+}: { 
+  type: 'soulmate' | 'friendship', 
+  user1: any, 
+  user2: any,
+  cardRef: React.RefObject<HTMLDivElement>
+}) => {
+  const isSoulmate = type === 'soulmate';
+  
+  return (
+    <div 
+      ref={cardRef}
+      className={`w-[320px] h-[480px] p-8 relative overflow-hidden flex flex-col items-center justify-between text-center ${
+        isSoulmate 
+          ? 'bg-gradient-to-br from-[#FFF5F5] via-white to-[#FFE4E4]' 
+          : 'bg-gradient-to-br from-[#FDFCF8] via-white to-[#F5F5F0]'
+      }`}
+      style={{ borderRadius: '40px' }}
+    >
+      {/* Decorative Elements */}
+      <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+        <div className="absolute top-10 left-10 w-20 h-20 border-2 border-[#E86B6B] rounded-full rotate-45" />
+        <div className="absolute bottom-10 right-10 w-32 h-32 border border-[#D4A373] rounded-full" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border border-[#E86B6B]/20 rounded-full" />
+      </div>
+
+      <div className="z-10 space-y-2">
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <Compass size={20} className="text-[#D4A373]" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#8C8970]">Amour Compass</span>
+        </div>
+        <h2 className={`text-3xl font-serif ${isSoulmate ? 'text-[#E86B6B]' : 'text-[#D4A373]'}`}>
+          {isSoulmate ? 'Soulmate Bond' : 'Eternal Friendship'}
+        </h2>
+        <p className="text-[10px] text-[#8C8970] italic">A connection written in the stars</p>
+      </div>
+
+      <div className="z-10 flex items-center justify-center gap-4 w-full">
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-16 h-16 bg-white rounded-2xl shadow-md border border-[#FFD7D7] flex items-center justify-center text-2xl font-serif italic text-[#E86B6B]">
+            {user1.name[0]}
+          </div>
+          <span className="text-xs font-bold text-[#4A4A3A]">{user1.name}</span>
+          <span className="text-[8px] uppercase tracking-widest text-[#8C8970]">{user1.zodiac}</span>
+        </div>
+
+        <div className="flex flex-col items-center">
+          {isSoulmate ? (
+            <Heart size={24} className="text-[#E86B6B] animate-pulse" fill="#E86B6B" />
+          ) : (
+            <Sparkles size={24} className="text-[#D4A373]" />
+          )}
+          <div className="h-12 w-[1px] bg-gradient-to-b from-transparent via-[#FFD7D7] to-transparent my-2" />
+        </div>
+
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-16 h-16 bg-white rounded-2xl shadow-md border border-[#FFD7D7] flex items-center justify-center text-2xl font-serif italic text-[#E86B6B]">
+            {user2.name[0]}
+          </div>
+          <span className="text-xs font-bold text-[#4A4A3A]">{user2.name}</span>
+          <span className="text-[8px] uppercase tracking-widest text-[#8C8970]">{user2.zodiac}</span>
+        </div>
+      </div>
+
+      <div className="z-10 w-full space-y-4">
+        <div className="p-4 bg-white/50 backdrop-blur-sm rounded-2xl border border-[#FFD7D7] shadow-sm">
+          <p className="text-[10px] leading-relaxed text-[#4A4A3A] italic">
+            {isSoulmate 
+              ? "Destiny brought them together through the Amour Compass. A bond forged in the stars and guided by the heart."
+              : "A friendship that transcends boundaries. Two souls connected by shared moments and mutual understanding."}
+          </p>
+        </div>
+        <div className="text-[8px] text-[#8C8970] font-bold uppercase tracking-widest">
+          Verified Connection • {new Date().toLocaleDateString()}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
   state = { hasError: false, error: null as any };
@@ -190,6 +276,9 @@ function App() {
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
+  const [isGeneratingCard, setIsGeneratingCard] = useState(false);
+  const [cardToDownload, setCardToDownload] = useState<any>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const [userChats, setUserChats] = useState<any[]>([]);
   const [activeLoveMatch, setActiveLoveMatch] = useState<any>(null);
   const [lastSentTime, setLastSentTime] = useState(0);
@@ -832,6 +921,94 @@ function App() {
       setLastSentTime(0);
       handleFirestoreError(e, OperationType.WRITE, `chats/${chatId}/messages`);
     }
+  };
+
+  const sendCardRequest = async (cardType: 'soulmate' | 'friendship') => {
+    if (!user || !selectedChatUser) return;
+    
+    const chatId = [user.uid, selectedChatUser.uid].sort().join('_');
+    const messageData = {
+      senderId: user.uid,
+      receiverId: selectedChatUser.uid,
+      timestamp: serverTimestamp(),
+      type: 'card_request',
+      cardType,
+      status: 'pending'
+    };
+
+    try {
+      await addDoc(collection(db, 'chats', chatId, 'messages'), messageData);
+      
+      await setDoc(doc(db, 'chats', chatId), {
+        participants: [user.uid, selectedChatUser.uid],
+        lastMessage: {
+          text: `Requested a ${cardType} card`,
+          senderId: user.uid,
+          timestamp: serverTimestamp()
+        },
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (e) {
+      console.error("Error sending card request:", e);
+      handleFirestoreError(e, OperationType.WRITE, `chats/${chatId}/messages`);
+    }
+  };
+
+  const respondToCardRequest = async (messageId: string, status: 'accepted' | 'declined', cardType: 'soulmate' | 'friendship') => {
+    if (!user || !selectedChatUser) return;
+    
+    const chatId = [user.uid, selectedChatUser.uid].sort().join('_');
+    
+    try {
+      await updateDoc(doc(db, 'chats', chatId, 'messages', messageId), {
+        status
+      });
+
+      if (status === 'accepted') {
+        // Send a "card generated" message
+        await addDoc(collection(db, 'chats', chatId, 'messages'), {
+          senderId: user.uid,
+          receiverId: selectedChatUser.uid,
+          timestamp: serverTimestamp(),
+          type: 'card_generated',
+          cardType
+        });
+
+        await setDoc(doc(db, 'chats', chatId), {
+          lastMessage: {
+            text: `Generated a ${cardType} card!`,
+            senderId: user.uid,
+            timestamp: serverTimestamp()
+          },
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      }
+    } catch (e) {
+      console.error("Error responding to card request:", e);
+      handleFirestoreError(e, OperationType.UPDATE, `chats/${chatId}/messages/${messageId}`);
+    }
+  };
+
+  const downloadCard = async (cardData: any) => {
+    setCardToDownload(cardData);
+    // Wait for render
+    setTimeout(async () => {
+      if (cardRef.current) {
+        setIsGeneratingCard(true);
+        try {
+          const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
+          const link = document.createElement('a');
+          link.download = `amour-compass-${cardData.type}-${Date.now()}.png`;
+          link.href = dataUrl;
+          link.click();
+        } catch (err) {
+          console.error('Could not generate card', err);
+        } finally {
+          setIsGeneratingCard(false);
+          setCardToDownload(null);
+        }
+      }
+    }, 100);
   };
 
   const copyId = () => {
@@ -1876,7 +2053,83 @@ function App() {
                               ? 'bg-[#E86B6B] text-white rounded-tr-none' 
                               : 'bg-white border border-[#FFD7D7] text-[#4A4A3A] rounded-tl-none'
                           }`}>
-                            {msg.type === 'emoji' ? (
+                            {msg.type === 'card_request' ? (
+                              <div className="space-y-3 min-w-[200px]">
+                                <div className={`flex items-center gap-2 mb-2 ${msg.senderId === user.uid ? 'text-white/80' : 'text-[#8C8970]'}`}>
+                                  {msg.cardType === 'soulmate' ? <Heart size={14} fill={msg.senderId === user.uid ? 'white' : '#E86B6B'} className={msg.senderId === user.uid ? 'text-white' : 'text-[#E86B6B]'} /> : <Sparkles size={14} className={msg.senderId === user.uid ? 'text-white' : 'text-[#D4A373]'} />}
+                                  <span className="text-[10px] font-bold uppercase tracking-widest">
+                                    {msg.senderId === user.uid ? `You requested a ${msg.cardType} card` : `${selectedChatUser.name} requested a ${msg.cardType} card`}
+                                  </span>
+                                </div>
+                                
+                                {msg.status === 'pending' && msg.senderId !== user.uid && (
+                                  <div className="flex gap-2">
+                                    <button 
+                                      onClick={() => respondToCardRequest(msg.id, 'accepted', msg.cardType)}
+                                      className="flex-1 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-1 shadow-sm hover:bg-emerald-600 transition-colors"
+                                    >
+                                      <Check size={12} /> Accept
+                                    </button>
+                                    <button 
+                                      onClick={() => respondToCardRequest(msg.id, 'declined', msg.cardType)}
+                                      className="flex-1 py-2 bg-[#8C8970]/10 text-[#8C8970] rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-1 hover:bg-[#8C8970]/20 transition-colors"
+                                    >
+                                      <X size={12} /> Decline
+                                    </button>
+                                  </div>
+                                )}
+                                
+                                {msg.status !== 'pending' && (
+                                  <div className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 ${msg.status === 'accepted' ? (msg.senderId === user.uid ? 'text-white' : 'text-emerald-500') : (msg.senderId === user.uid ? 'text-white/60' : 'text-[#E86B6B]')}`}>
+                                    {msg.status === 'accepted' ? <Check size={12} /> : <XCircle size={12} />}
+                                    {msg.status === 'accepted' ? 'Request Accepted' : 'Request Declined'}
+                                  </div>
+                                )}
+                              </div>
+                            ) : msg.type === 'card_generated' ? (
+                              <div className="space-y-4 min-w-[240px]">
+                                <div className="relative group overflow-hidden rounded-2xl border border-white/20">
+                                  <div className="scale-[0.5] origin-top -mb-[240px] -mx-[80px]">
+                                    <ConnectionCard 
+                                      type={msg.cardType} 
+                                      user1={msg.senderId === user.uid ? userData : selectedChatUser} 
+                                      user2={msg.senderId === user.uid ? selectedChatUser : userData}
+                                      cardRef={null as any}
+                                    />
+                                  </div>
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                    <button 
+                                      onClick={() => downloadCard({
+                                        type: msg.cardType,
+                                        user1: msg.senderId === user.uid ? userData : selectedChatUser,
+                                        user2: msg.senderId === user.uid ? selectedChatUser : userData
+                                      })}
+                                      className="p-3 bg-white text-[#4A4A3A] rounded-full shadow-xl hover:scale-110 transition-all"
+                                    >
+                                      <Download size={24} />
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-center gap-2 pt-2">
+                                  <p className={`text-[10px] font-bold uppercase tracking-widest ${msg.senderId === user.uid ? 'text-white/80' : 'text-[#8C8970]'}`}>Beautiful {msg.cardType} Card Generated!</p>
+                                  <button 
+                                    onClick={() => downloadCard({
+                                      type: msg.cardType,
+                                      user1: msg.senderId === user.uid ? userData : selectedChatUser,
+                                      user2: msg.senderId === user.uid ? selectedChatUser : userData
+                                    })}
+                                    disabled={isGeneratingCard}
+                                    className={`w-full py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-sm ${
+                                      msg.senderId === user.uid 
+                                        ? 'bg-white text-[#E86B6B] hover:bg-[#FFF5F5]' 
+                                        : 'bg-[#4A4A3A] text-white hover:bg-[#E86B6B]'
+                                    }`}
+                                  >
+                                    {isGeneratingCard ? 'Generating...' : <><Download size={14} /> Download & Share</>}
+                                  </button>
+                                </div>
+                              </div>
+                            ) : msg.type === 'emoji' ? (
                               <div className="text-5xl py-2 text-center">{msg.emoji}</div>
                             ) : (
                               <p className="leading-relaxed">{msg.text}</p>
@@ -1892,6 +2145,22 @@ function App() {
 
                   {/* Chat Input */}
                   <div className="pb-10 pt-6 px-6 border-t border-[#FFD7D7] space-y-4 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
+                    {/* Card Selection Menu */}
+                    <div className="flex justify-center gap-3">
+                      <button 
+                        onClick={() => sendCardRequest('soulmate')}
+                        className="px-4 py-2 bg-[#FFF5F5] border border-[#E86B6B] text-[#E86B6B] rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#E86B6B] hover:text-white transition-all shadow-sm"
+                      >
+                        <Heart size={12} fill="currentColor" /> Soulmate Card
+                      </button>
+                      <button 
+                        onClick={() => sendCardRequest('friendship')}
+                        className="px-4 py-2 bg-[#FDFCF8] border border-[#D4A373] text-[#D4A373] rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#D4A373] hover:text-white transition-all shadow-sm"
+                      >
+                        <Sparkles size={12} /> Friendship Card
+                      </button>
+                    </div>
+
                     <div className="flex justify-center gap-6">
                       <button 
                         onClick={() => sendChatMessage('emoji', '❤️')}
@@ -1927,6 +2196,18 @@ function App() {
                 </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Hidden Card for Download */}
+          <div className="fixed -left-[9999px] top-0 pointer-events-none">
+            {cardToDownload && (
+              <ConnectionCard 
+                type={cardToDownload.type}
+                user1={cardToDownload.user1}
+                user2={cardToDownload.user2}
+                cardRef={cardRef}
+              />
+            )}
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
