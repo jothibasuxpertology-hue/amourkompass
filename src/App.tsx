@@ -1572,14 +1572,15 @@ function App() {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 20 }}
-                            className="w-full bg-white/80 backdrop-blur-sm p-4 md:p-5 rounded-[2rem] border border-[#FFD7D7] flex items-center justify-between shadow-sm gap-3 overflow-hidden"
+                            onClick={() => setSelectedChatUser(match)}
+                            className="w-full bg-white/80 backdrop-blur-sm p-4 md:p-5 rounded-[2rem] border border-[#FFD7D7] flex items-center justify-between shadow-sm gap-3 overflow-hidden cursor-pointer hover:bg-white transition-all group"
                           >
                             <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
-                              <div className="w-10 h-10 md:w-12 md:h-12 bg-[#FFF5F5] rounded-2xl flex-shrink-0 flex items-center justify-center text-[#E86B6B]">
+                              <div className="w-10 h-10 md:w-12 md:h-12 bg-[#FFF5F5] rounded-2xl flex-shrink-0 flex items-center justify-center text-[#E86B6B] group-hover:scale-110 transition-transform">
                                 <Heart size={20} className="md:w-6 md:h-6" fill={Math.abs(heading - match.heading) < 15 ? "currentColor" : "none"} />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <div className="text-sm font-bold text-[#4A4A3A] truncate">{match.name}, {match.age}</div>
+                                <div className="text-sm font-bold text-[#4A4A3A] truncate group-hover:text-[#E86B6B] transition-colors">{match.name}, {match.age}</div>
                                 <div className="text-[10px] text-[#8C8970] font-sans uppercase tracking-widest truncate">{match.zodiac} • {match.country}</div>
                                 {(() => {
                                   const isZodiacCompatible = ZODIAC_COMPATIBILITY[userData?.zodiac || '']?.includes(match.zodiac);
@@ -1598,19 +1599,19 @@ function App() {
                             <div className="text-right flex flex-col items-end gap-1.5 md:gap-2 flex-shrink-0">
                               <div className="flex gap-1">
                                 <button 
-                                  onClick={() => toggleSaved(match.uid, 'friends')}
+                                  onClick={(e) => { e.stopPropagation(); toggleSaved(match.uid, 'friends'); }}
                                   className={`p-1.5 md:p-2 rounded-xl border transition-all ${userData?.friends?.includes(match.uid) ? 'bg-[#D4A373] border-[#D4A373] text-white' : 'bg-white border-[#FFD7D7] text-[#8C8970]'}`}
                                 >
                                   <UserPlus size={12} className="md:w-3.5 md:h-3.5" />
                                 </button>
                                 <button 
-                                  onClick={() => toggleSaved(match.uid, 'loves')}
+                                  onClick={(e) => { e.stopPropagation(); toggleSaved(match.uid, 'loves'); }}
                                   className={`p-1.5 md:p-2 rounded-xl border transition-all ${userData?.loves?.includes(match.uid) ? 'bg-[#E86B6B] border-[#E86B6B] text-white' : 'bg-white border-[#FFD7D7] text-[#8C8970]'}`}
                                 >
                                   <Heart size={12} className="md:w-3.5 md:h-3.5" />
                                 </button>
                                 <button 
-                                  onClick={() => setSelectedChatUser(match)}
+                                  onClick={(e) => { e.stopPropagation(); setSelectedChatUser(match); }}
                                   className="p-1.5 md:p-2 rounded-xl border border-[#FFD7D7] bg-white text-[#8C8970] hover:text-[#E86B6B] transition-all"
                                 >
                                   <MessageCircle size={12} className="md:w-3.5 md:h-3.5" />
@@ -1746,11 +1747,12 @@ function App() {
                           key={saved.uid}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="w-full bg-white p-4 md:p-5 rounded-[2rem] border border-[#FFD7D7] flex items-center justify-between shadow-sm gap-3 overflow-hidden"
+                          onClick={() => setSelectedChatUser(saved)}
+                          className="w-full bg-white p-4 md:p-5 rounded-[2rem] border border-[#FFD7D7] flex items-center justify-between shadow-sm gap-3 overflow-hidden cursor-pointer hover:bg-[#FFF5F5] transition-all group"
                         >
                           <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
                             <div className="relative flex-shrink-0">
-                              <div className="w-10 h-10 md:w-12 md:h-12 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#D4A373] font-serif italic text-lg md:text-xl">
+                              <div className="w-10 h-10 md:w-12 md:h-12 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#D4A373] font-serif italic text-lg md:text-xl group-hover:scale-110 transition-transform">
                                 {saved.name[0]}
                               </div>
                               {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 300000 && (
@@ -1758,19 +1760,19 @@ function App() {
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="text-sm font-bold text-[#4A4A3A] truncate">{saved.name}, {saved.age}</div>
+                              <div className="text-sm font-bold text-[#4A4A3A] truncate group-hover:text-[#D4A373] transition-colors">{saved.name}, {saved.age}</div>
                               <div className="text-[10px] text-[#8C8970] font-sans uppercase tracking-widest truncate">{saved.zodiac} • {saved.country}</div>
                             </div>
                           </div>
                           <div className="flex gap-1 flex-shrink-0">
                             <button 
-                              onClick={() => setSelectedChatUser(saved)}
+                              onClick={(e) => { e.stopPropagation(); setSelectedChatUser(saved); }}
                               className="p-2 md:p-3 text-[#D4A373] hover:bg-[#D4A373]/5 rounded-xl transition-all"
                             >
                               <MessageCircle size={18} />
                             </button>
                             <button 
-                              onClick={() => toggleSaved(saved.uid, 'friends')}
+                              onClick={(e) => { e.stopPropagation(); toggleSaved(saved.uid, 'friends'); }}
                               className="p-2 md:p-3 text-[#D4A373] hover:bg-[#D4A373]/5 rounded-xl transition-all"
                             >
                               ✕
@@ -1799,11 +1801,12 @@ function App() {
                           key={saved.uid}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="w-full bg-white p-4 md:p-5 rounded-[2rem] border border-[#FFD7D7] flex items-center justify-between shadow-sm gap-3 overflow-hidden"
+                          onClick={() => setSelectedChatUser(saved)}
+                          className="w-full bg-white p-4 md:p-5 rounded-[2rem] border border-[#FFD7D7] flex items-center justify-between shadow-sm gap-3 overflow-hidden cursor-pointer hover:bg-[#FFF5F5] transition-all group"
                         >
                           <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
                             <div className="relative flex-shrink-0">
-                              <div className="w-10 h-10 md:w-12 md:h-12 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#E86B6B]">
+                              <div className="w-10 h-10 md:w-12 md:h-12 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#E86B6B] group-hover:scale-110 transition-transform">
                                 <Heart size={20} className="md:w-6 md:h-6" fill="currentColor" />
                               </div>
                               {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 300000 && (
@@ -1811,19 +1814,19 @@ function App() {
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="text-sm font-bold text-[#4A4A3A] truncate">{saved.name}, {saved.age}</div>
+                              <div className="text-sm font-bold text-[#4A4A3A] truncate group-hover:text-[#E86B6B] transition-colors">{saved.name}, {saved.age}</div>
                               <div className="text-[10px] text-[#8C8970] font-sans uppercase tracking-widest truncate">{saved.zodiac} • {saved.country}</div>
                             </div>
                           </div>
                           <div className="flex gap-1 flex-shrink-0">
                             <button 
-                              onClick={() => setSelectedChatUser(saved)}
+                              onClick={(e) => { e.stopPropagation(); setSelectedChatUser(saved); }}
                               className="p-2 md:p-3 text-[#E86B6B] hover:bg-[#E86B6B]/5 rounded-xl transition-all"
                             >
                               <MessageCircle size={18} />
                             </button>
                             <button 
-                              onClick={() => toggleSaved(saved.uid, 'loves')}
+                              onClick={(e) => { e.stopPropagation(); toggleSaved(saved.uid, 'loves'); }}
                               className="p-2 md:p-3 text-[#E86B6B] hover:bg-[#E86B6B]/5 rounded-xl transition-all"
                             >
                               ✕
