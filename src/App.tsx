@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, Component } from 'react';
 import { motion, AnimatePresence, useSpring } from 'motion/react';
-import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft, Download, Share2, Check, XCircle, ShieldCheck } from 'lucide-react';
+import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft, Download, Share2, Check, XCircle, ShieldCheck, Instagram, Mail } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { auth, db } from './firebase';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
@@ -1840,6 +1840,50 @@ function App() {
                 </div>
               </div>
             )}
+
+            {/* Home Page Footer - Contact & Support */}
+            <footer className="w-full mt-12 pb-8 border-t border-[#FFD7D7] pt-8 space-y-6">
+              <div className="text-center space-y-1">
+                <h4 className="text-[10px] font-sans font-bold uppercase tracking-[0.3em] text-[#8C8970]">Connect with us</h4>
+                <p className="text-[10px] text-[#D4A373] italic">Join the Amour Compass community</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <a 
+                  href="https://www.instagram.com/amourcompass/?hl=en" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-2 p-4 bg-white/50 rounded-3xl border border-[#FFD7D7] hover:bg-[#E86B6B]/5 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#E86B6B] group-hover:scale-110 transition-transform">
+                    <Instagram size={20} />
+                  </div>
+                  <span className="text-[10px] font-bold text-[#4A4A3A] uppercase tracking-widest">Instagram</span>
+                </a>
+                <a 
+                  href="mailto:emojibadges@zohomail.in" 
+                  className="flex flex-col items-center gap-2 p-4 bg-white/50 rounded-3xl border border-[#FFD7D7] hover:bg-[#E86B6B]/5 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#E86B6B] group-hover:scale-110 transition-transform">
+                    <Mail size={20} />
+                  </div>
+                  <span className="text-[10px] font-bold text-[#4A4A3A] uppercase tracking-widest">Support</span>
+                </a>
+              </div>
+
+              <div className="flex items-center justify-center gap-3 p-4 bg-[#FDFCF8]/50 rounded-3xl border border-[#D4A373]/10">
+                <ShieldCheck size={16} className="text-[#D4A373]" />
+                <div className="text-[9px] font-bold text-[#8C8970] uppercase tracking-[0.15em]">
+                  Crafted by <span className="text-[#D4A373]">Crea8tiv Team</span>
+                </div>
+              </div>
+
+              <div className="text-center pt-4">
+                <div className="text-[8px] font-sans font-bold uppercase tracking-[0.4em] text-[#D4A373]/40">
+                  © 2026 Amour Compass • All Rights Reserved
+                </div>
+              </div>
+            </footer>
           </main>
 
           {/* Settings Modal */}
