@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://ais-pre-ldavxutwpvhbfxotlkwg6h-470875002060.asia-east1.run.app/sitemap.xml
+Sitemap: https://amourcompass.com/sitemap.xml
