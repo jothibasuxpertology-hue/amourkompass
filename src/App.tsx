@@ -1469,6 +1469,15 @@ function App() {
               </div>
               <div className="flex gap-2">
                 <div className="flex bg-white rounded-2xl p-1 shadow-sm border border-[#FFD7D7]">
+                  <a 
+                    href="https://www.instagram.com/amourcompass/?hl=en" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-xl text-[#E86B6B] hover:bg-[#FFF5F5] transition-all"
+                    title="Instagram"
+                  >
+                    <Instagram size={18} />
+                  </a>
                   <button 
                     onClick={() => setActiveTab('compass')}
                     className={`p-2 rounded-xl transition-all ${activeTab === 'compass' ? 'bg-[#E86B6B] text-white' : 'text-[#8C8970]'}`}
@@ -1844,47 +1853,10 @@ function App() {
               </div>
             )}
 
-            {/* Home Page Footer - Contact & Support */}
-            <footer className="w-full mt-12 pb-8 border-t border-[#FFD7D7] pt-8 space-y-6">
-              <div className="text-center space-y-1">
-                <h4 className="text-[10px] font-sans font-bold uppercase tracking-[0.3em] text-[#8C8970]">Connect with us</h4>
-                <p className="text-[10px] text-[#D4A373] italic">Join the Amour Compass community</p>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <a 
-                  href="https://www.instagram.com/amourcompass/?hl=en" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex flex-col items-center gap-2 p-4 bg-white/50 rounded-3xl border border-[#FFD7D7] hover:bg-[#E86B6B]/5 transition-all group"
-                >
-                  <div className="w-10 h-10 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#E86B6B] group-hover:scale-110 transition-transform">
-                    <Instagram size={20} />
-                  </div>
-                  <span className="text-[10px] font-bold text-[#4A4A3A] uppercase tracking-widest">Instagram</span>
-                </a>
-                <a 
-                  href="mailto:emojibadges@zohomail.in" 
-                  className="flex flex-col items-center gap-2 p-4 bg-white/50 rounded-3xl border border-[#FFD7D7] hover:bg-[#E86B6B]/5 transition-all group"
-                >
-                  <div className="w-10 h-10 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#E86B6B] group-hover:scale-110 transition-transform">
-                    <Mail size={20} />
-                  </div>
-                  <span className="text-[10px] font-bold text-[#4A4A3A] uppercase tracking-widest">Support</span>
-                </a>
-              </div>
-
-              <div className="flex items-center justify-center gap-3 p-4 bg-[#FDFCF8]/50 rounded-3xl border border-[#D4A373]/10">
-                <ShieldCheck size={16} className="text-[#D4A373]" />
-                <div className="text-[9px] font-bold text-[#8C8970] uppercase tracking-[0.15em]">
-                  Crafted by <span className="text-[#D4A373]">Crea8tiv Team</span>
-                </div>
-              </div>
-
-              <div className="text-center pt-4">
-                <div className="text-[8px] font-sans font-bold uppercase tracking-[0.4em] text-[#D4A373]/40">
-                  © 2026 Amour Compass • All Rights Reserved
-                </div>
+            {/* Home Page Footer - Minimal */}
+            <footer className="w-full mt-12 pb-8 border-t border-[#FFD7D7] pt-8 text-center">
+              <div className="text-[8px] font-sans font-bold uppercase tracking-[0.4em] text-[#D4A373]/40">
+                © 2026 Amour Compass • All Rights Reserved
               </div>
             </footer>
           </main>
@@ -1995,6 +1967,23 @@ function App() {
                         <button onClick={copyId} className="text-[10px] text-[#E86B6B] font-bold uppercase hover:underline">Copy</button>
                       </div>
                       <div className="p-4 bg-[#FFF5F5] rounded-2xl font-mono text-[10px] break-all select-all border border-[#FFD7D7] opacity-60">{user.uid}</div>
+                    </div>
+
+                    <div className="space-y-3 pt-2">
+                      <label className="text-[10px] font-sans font-bold uppercase tracking-widest text-[#8C8970]">Support & Community</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <a 
+                          href="mailto:emojibadges@zohomail.in" 
+                          className="flex items-center gap-2 p-3 bg-[#FFF5F5] rounded-xl border border-[#FFD7D7] hover:bg-[#E86B6B]/5 transition-all"
+                        >
+                          <Mail size={14} className="text-[#E86B6B]" />
+                          <span className="text-[10px] font-bold text-[#4A4A3A] uppercase tracking-widest">Support</span>
+                        </a>
+                        <div className="flex items-center gap-2 p-3 bg-[#FDFCF8] rounded-xl border border-[#D4A373]/20">
+                          <ShieldCheck size={14} className="text-[#D4A373]" />
+                          <span className="text-[9px] font-bold text-[#8C8970] uppercase tracking-widest">Crea8tiv Team</span>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="pt-4">
