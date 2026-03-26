@@ -102,9 +102,13 @@ const ConnectionCard = ({
 
       <div className="z-10 flex items-center justify-center gap-4 w-full">
         <div className="flex flex-col items-center gap-2">
-          <div className="w-16 h-16 bg-white rounded-2xl shadow-md border border-[#FFD7D7] flex items-center justify-center text-2xl font-serif italic text-[#E86B6B]">
-            {user1.name[0]}
-          </div>
+          {user1.profilePic ? (
+            <img src={user1.profilePic} alt={user1.name} className="w-16 h-16 rounded-2xl object-cover shadow-md border border-[#FFD7D7]" referrerPolicy="no-referrer" />
+          ) : (
+            <div className="w-16 h-16 bg-white rounded-2xl shadow-md border border-[#FFD7D7] flex items-center justify-center text-2xl font-serif italic text-[#E86B6B]">
+              {user1.name[0]}
+            </div>
+          )}
           <span className="text-xs font-bold text-[#4A4A3A]">{user1.name}</span>
           <span className="text-[8px] uppercase tracking-widest text-[#8C8970]">{user1.zodiac}</span>
         </div>
@@ -119,9 +123,13 @@ const ConnectionCard = ({
         </div>
 
         <div className="flex flex-col items-center gap-2">
-          <div className="w-16 h-16 bg-white rounded-2xl shadow-md border border-[#FFD7D7] flex items-center justify-center text-2xl font-serif italic text-[#E86B6B]">
-            {user2.name[0]}
-          </div>
+          {user2.profilePic ? (
+            <img src={user2.profilePic} alt={user2.name} className="w-16 h-16 rounded-2xl object-cover shadow-md border border-[#FFD7D7]" referrerPolicy="no-referrer" />
+          ) : (
+            <div className="w-16 h-16 bg-white rounded-2xl shadow-md border border-[#FFD7D7] flex items-center justify-center text-2xl font-serif italic text-[#E86B6B]">
+              {user2.name[0]}
+            </div>
+          )}
           <span className="text-xs font-bold text-[#4A4A3A]">{user2.name}</span>
           <span className="text-[8px] uppercase tracking-widest text-[#8C8970]">{user2.zodiac}</span>
         </div>
@@ -249,6 +257,8 @@ const ZODIAC_COMPATIBILITY: { [key: string]: string[] } = {
   'Pisces': ['Cancer', 'Scorpio'],
 };
 
+import { PROFILE_PICS } from './profilePics';
+
 function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [heading, setHeading] = useState(0);
@@ -276,6 +286,7 @@ function App() {
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
+  const [chatError, setChatError] = useState<string | null>(null);
   const [isGeneratingCard, setIsGeneratingCard] = useState(false);
   const [cardToDownload, setCardToDownload] = useState<any>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -298,7 +309,8 @@ function App() {
     age: 13,
     zodiac: 'Aries',
     targetCountry: 'United States',
-    lookingForLove: true
+    lookingForLove: true,
+    profilePic: PROFILE_PICS[0]
   });
 
   const openEditProfile = () => {
@@ -311,7 +323,8 @@ function App() {
         age: userData.age || 13,
         zodiac: userData.zodiac || 'Aries',
         targetCountry: userData.targetCountry || 'United States',
-        lookingForLove: userData.lookingForLove || false
+        lookingForLove: userData.lookingForLove || false,
+        profilePic: userData.profilePic || PROFILE_PICS[0]
       });
       setShowOnboarding(true);
       setShowSettings(false);
@@ -885,6 +898,16 @@ function App() {
       return;
     }
     
+    // Prevent sending external links
+    if (type === 'text') {
+      const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.(com|org|net|io|me|co|us|uk|ca|de|fr|in|app|dev|link|xyz)(\/[^\s]*)?)/i;
+      if (urlRegex.test(content)) {
+        setChatError("External links are not allowed in the chat.");
+        setTimeout(() => setChatError(null), 3000);
+        return;
+      }
+    }
+    
     const chatId = [user.uid, selectedChatUser.uid].sort().join('_');
     const messageData = {
       senderId: user.uid,
@@ -1228,40 +1251,40 @@ function App() {
           initial={{ opacity: 0, x: 50 }} 
           animate={{ opacity: 1, x: 0 }} 
           exit={{ opacity: 0, x: -50 }}
-          className="min-h-screen bg-[#FFF5F5] flex flex-col items-center justify-center p-6 text-[#4A4A3A]"
+          className="min-h-screen bg-[#FFF5F5] flex flex-col items-center justify-center p-4 sm:p-6 text-[#4A4A3A]"
         >
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md bg-white rounded-[2.5rem] p-8 shadow-xl border border-[#FFD7D7] space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-3xl font-serif text-[#D4A373]">Your <span className="italic text-[#E86B6B]">profile please</span></h2>
-              <p className="text-sm text-[#8C8970]">Tell us about yourself to find your match.</p>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md bg-white rounded-[2.5rem] shadow-xl border border-[#FFD7D7] flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="text-center space-y-2 p-6 sm:p-8 pb-4 shrink-0 bg-white z-10 border-b border-[#FFD7D7]/30">
+              <h2 className="text-2xl sm:text-3xl font-serif text-[#D4A373]">Your <span className="italic text-[#E86B6B]">profile please</span></h2>
+              <p className="text-xs sm:text-sm text-[#8C8970]">Tell us about yourself to find your match.</p>
             </div>
-            <form onSubmit={handleOnboardingSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleOnboardingSubmit} className="space-y-4 overflow-y-auto p-6 sm:p-8 pt-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Name</label>
-                  <input required value={onboardingData.name} onChange={e => setOnboardingData({...onboardingData, name: e.target.value})} className="w-full p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" />
+                  <input required value={onboardingData.name} onChange={e => setOnboardingData({...onboardingData, name: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Age</label>
-                  <input required type="number" min="13" value={onboardingData.age} onChange={e => setOnboardingData({...onboardingData, age: parseInt(e.target.value)})} className="w-full p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" />
+                  <input required type="number" min="13" value={onboardingData.age} onChange={e => setOnboardingData({...onboardingData, age: parseInt(e.target.value)})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Country</label>
-                  <select required value={onboardingData.country} onChange={e => setOnboardingData({...onboardingData, country: e.target.value})} className="w-full p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
+                  <select required value={onboardingData.country} onChange={e => setOnboardingData({...onboardingData, country: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
                     {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Language</label>
-                  <input value={onboardingData.language} onChange={e => setOnboardingData({...onboardingData, language: e.target.value})} className="w-full p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" placeholder="e.g. English, Spanish" />
+                  <input value={onboardingData.language} onChange={e => setOnboardingData({...onboardingData, language: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" placeholder="e.g. English, Spanish" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Gender</label>
-                  <select value={onboardingData.gender} onChange={e => setOnboardingData({...onboardingData, gender: e.target.value})} className="w-full p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
+                  <select value={onboardingData.gender} onChange={e => setOnboardingData({...onboardingData, gender: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
                     <option>Male</option>
                     <option>Female</option>
                     <option>Other</option>
@@ -1269,21 +1292,21 @@ function App() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Zodiac</label>
-                  <select value={onboardingData.zodiac} onChange={e => setOnboardingData({...onboardingData, zodiac: e.target.value})} className="w-full p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
+                  <select value={onboardingData.zodiac} onChange={e => setOnboardingData({...onboardingData, zodiac: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
                     {['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'].map(z => <option key={z}>{z}</option>)}
                   </select>
                 </div>
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Searching for soulmate in (Country)</label>
-                <select required value={onboardingData.targetCountry} onChange={e => setOnboardingData({...onboardingData, targetCountry: e.target.value})} className="w-full p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
+                <select required value={onboardingData.targetCountry} onChange={e => setOnboardingData({...onboardingData, targetCountry: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
                   <option value="Any">Any Country</option>
                   {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Looking for Love?</label>
-                <div className="flex items-center gap-3 p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl">
+                <div className="flex items-center gap-3 p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl">
                   <input 
                     type="checkbox" 
                     checked={onboardingData.lookingForLove} 
@@ -1293,7 +1316,27 @@ function App() {
                   <span className="text-sm text-[#4A4A3A]">Enable Love Compass</span>
                 </div>
               </div>
-              <button type="submit" className="w-full py-4 bg-[#E86B6B] text-white rounded-full font-bold uppercase tracking-widest text-xs shadow-lg mt-4 shadow-[#E86B6B]/20">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Choose Profile Picture</label>
+                <div className="grid grid-cols-5 gap-2 max-h-48 overflow-y-auto p-2 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl">
+                  {PROFILE_PICS.map((pic, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setOnboardingData({...onboardingData, profilePic: pic})}
+                      className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${onboardingData.profilePic === pic ? 'border-[#E86B6B] scale-105 shadow-md' : 'border-transparent hover:border-[#FFD7D7]'}`}
+                    >
+                      <img src={pic} alt={`Profile option ${idx + 1}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      {onboardingData.profilePic === pic && (
+                        <div className="absolute inset-0 bg-[#E86B6B]/10 flex items-center justify-center">
+                          <Check size={16} className="text-[#E86B6B] drop-shadow-md" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button type="submit" className="w-full py-3 sm:py-4 bg-[#E86B6B] text-white rounded-full font-bold uppercase tracking-widest text-xs shadow-lg mt-4 shadow-[#E86B6B]/20">
                 Find my Soulmate
               </button>
             </form>
@@ -1305,10 +1348,10 @@ function App() {
           initial={{ opacity: 0 }} 
           animate={{ opacity: 1 }} 
           exit={{ opacity: 0 }}
-          className="min-h-screen w-full bg-[#FFF5F5] text-[#4A4A3A] font-serif selection:bg-[#FFD7D7] overflow-hidden flex flex-col items-center justify-center p-6"
+          className="min-h-screen w-full bg-[#FFF5F5] text-[#4A4A3A] font-serif selection:bg-[#FFD7D7] overflow-x-hidden overflow-y-auto flex flex-col items-center p-4 sm:p-6"
         >
           {/* Background Decorative Elements */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
             <motion.div 
               animate={{ scale: [1, 1.1, 1], rotate: [0, 5, 0] }}
               transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
@@ -1425,8 +1468,12 @@ function App() {
                   </button>
 
                   <div className="space-y-4">
-                    <div className="w-20 h-20 bg-[#FFF5F5] rounded-full flex items-center justify-center mx-auto">
-                      <Heart size={40} className="text-[#E86B6B] animate-bounce" fill="currentColor" />
+                    <div className="w-20 h-20 bg-[#FFF5F5] rounded-full flex items-center justify-center mx-auto overflow-hidden border-2 border-[#E86B6B]">
+                      {activeLoveMatch.profilePic ? (
+                        <img src={activeLoveMatch.profilePic} alt={activeLoveMatch.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <Heart size={40} className="text-[#E86B6B] animate-bounce" fill="currentColor" />
+                      )}
                     </div>
                     <div className="space-y-1">
                       <h2 className="text-2xl font-serif text-[#E86B6B]">Soulmate Found!</h2>
@@ -1457,7 +1504,7 @@ function App() {
             )}
           </AnimatePresence>
 
-          <main className="relative z-10 w-full max-w-md flex flex-col items-center gap-10">
+          <main className="relative z-10 w-full max-w-md flex flex-col items-center gap-8 sm:gap-10 my-auto py-8">
             {/* Header */}
             <header className="w-full flex justify-between items-start">
               <div className="space-y-1">
@@ -1508,8 +1555,12 @@ function App() {
                     <Heart size={18} />
                   </button>
                 </div>
-                <button onClick={() => setShowSettings(true)} className="p-3 bg-white rounded-2xl shadow-sm border border-[#FFD7D7] text-[#8C8970] hover:text-[#E86B6B] transition-all">
-                  <Settings size={20} />
+                <button onClick={() => setShowSettings(true)} className="w-10 h-10 bg-white rounded-2xl shadow-sm border border-[#FFD7D7] text-[#8C8970] hover:border-[#E86B6B] transition-all overflow-hidden flex items-center justify-center">
+                  {userData?.profilePic ? (
+                    <img src={userData.profilePic} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <Settings size={20} />
+                  )}
                 </button>
               </div>
             </header>
@@ -1585,8 +1636,14 @@ function App() {
                             className="w-full bg-white/80 backdrop-blur-sm p-4 md:p-5 rounded-[2rem] border border-[#FFD7D7] flex items-center justify-between shadow-sm gap-3 overflow-hidden cursor-pointer hover:bg-white transition-all group"
                           >
                             <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
-                              <div className="w-10 h-10 md:w-12 md:h-12 bg-[#FFF5F5] rounded-2xl flex-shrink-0 flex items-center justify-center text-[#E86B6B] group-hover:scale-110 transition-transform">
-                                <Heart size={20} className="md:w-6 md:h-6" fill={Math.abs(heading - match.heading) < 15 ? "currentColor" : "none"} />
+                              <div className="relative flex-shrink-0">
+                                {match.profilePic ? (
+                                  <img src={match.profilePic} alt={match.name} className="w-10 h-10 md:w-12 md:h-12 rounded-2xl object-cover border border-[#FFD7D7] group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
+                                ) : (
+                                  <div className="w-10 h-10 md:w-12 md:h-12 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#E86B6B] group-hover:scale-110 transition-transform">
+                                    <Heart size={20} className="md:w-6 md:h-6" fill={Math.abs(heading - match.heading) < 15 ? "currentColor" : "none"} />
+                                  </div>
+                                )}
                               </div>
                               <div className="min-w-0 flex-1">
                                 <div className="text-sm font-bold text-[#4A4A3A] truncate group-hover:text-[#E86B6B] transition-colors">{match.name}, {match.age}</div>
@@ -1711,9 +1768,13 @@ function App() {
                           >
                             <div className="flex items-center gap-4">
                               <div className="relative">
-                                <div className="w-12 h-12 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#E86B6B] font-serif italic text-xl">
-                                  {chat.otherUser.name[0]}
-                                </div>
+                                {chat.otherUser.profilePic ? (
+                                  <img src={chat.otherUser.profilePic} alt={chat.otherUser.name} className="w-12 h-12 rounded-2xl object-cover border border-[#FFD7D7]" referrerPolicy="no-referrer" />
+                                ) : (
+                                  <div className="w-12 h-12 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#E86B6B] font-serif italic text-xl">
+                                    {chat.otherUser.name[0]}
+                                  </div>
+                                )}
                                 {isUnread && (
                                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#E86B6B] border-2 border-white rounded-full" />
                                 )}
@@ -1761,9 +1822,13 @@ function App() {
                         >
                           <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
                             <div className="relative flex-shrink-0">
-                              <div className="w-10 h-10 md:w-12 md:h-12 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#D4A373] font-serif italic text-lg md:text-xl group-hover:scale-110 transition-transform">
-                                {saved.name[0]}
-                              </div>
+                              {saved.profilePic ? (
+                                <img src={saved.profilePic} alt={saved.name} className="w-10 h-10 md:w-12 md:h-12 rounded-2xl object-cover border border-[#FFD7D7] group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
+                              ) : (
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#D4A373] font-serif italic text-lg md:text-xl group-hover:scale-110 transition-transform">
+                                  {saved.name[0]}
+                                </div>
+                              )}
                               {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 300000 && (
                                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
                               )}
@@ -1815,9 +1880,13 @@ function App() {
                         >
                           <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
                             <div className="relative flex-shrink-0">
-                              <div className="w-10 h-10 md:w-12 md:h-12 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#E86B6B] group-hover:scale-110 transition-transform">
-                                <Heart size={20} className="md:w-6 md:h-6" fill="currentColor" />
-                              </div>
+                              {saved.profilePic ? (
+                                <img src={saved.profilePic} alt={saved.name} className="w-10 h-10 md:w-12 md:h-12 rounded-2xl object-cover border border-[#FFD7D7] group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
+                              ) : (
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#E86B6B] group-hover:scale-110 transition-transform">
+                                  <Heart size={20} className="md:w-6 md:h-6" fill="currentColor" />
+                                </div>
+                              )}
                               {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 300000 && (
                                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
                               )}
@@ -1864,23 +1933,24 @@ function App() {
           {/* Settings Modal */}
           <AnimatePresence>
             {showSettings && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-[#E86B6B]/10 backdrop-blur-md flex items-center justify-center p-6">
-                <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl space-y-8 border border-[#FFD7D7]">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-2xl font-serif text-[#D4A373]">Settings</h3>
-                    <div className="flex items-center gap-3">
-                      <button onClick={openEditProfile} className="text-[10px] font-bold uppercase tracking-widest text-[#E86B6B] bg-[#FFF5F5] px-3 py-1 rounded-lg border border-[#FFD7D7]">Edit Profile</button>
-                      <button onClick={closeSettings} className="text-[#8C8970]">✕</button>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-[#E86B6B]/10 backdrop-blur-md flex items-center justify-center p-4 sm:p-6">
+                <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-white w-full max-w-sm max-h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl border border-[#FFD7D7] overflow-hidden">
+                  <div className="flex justify-between items-center gap-2 p-6 sm:p-8 pb-4 shrink-0 bg-white z-10 border-b border-[#FFD7D7]/30">
+                    <h3 className="text-xl sm:text-2xl font-serif text-[#D4A373] truncate">Settings</h3>
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                      <button onClick={openEditProfile} className="text-[10px] font-bold uppercase tracking-widest text-[#E86B6B] bg-[#FFF5F5] px-2 sm:px-3 py-1 rounded-lg border border-[#FFD7D7]">Edit Profile</button>
+                      <button onClick={closeSettings} className="text-[#8C8970] p-1">✕</button>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="overflow-y-auto p-6 sm:p-8 pt-4 space-y-6 sm:space-y-8">
+                    <div className="space-y-4">
                     <div className="space-y-2">
                       <label className="text-[10px] font-sans font-bold uppercase tracking-widest text-[#8C8970]">Your Username</label>
                       {userData?.username ? (
-                        <div className="flex items-center justify-between p-4 bg-[#FFF5F5] rounded-2xl border border-[#FFD7D7]">
-                          <span className="font-medium text-[#4A4A3A]">@{userData.username}</span>
-                          <span className="text-[10px] text-[#E86B6B] uppercase font-bold">Active</span>
+                        <div className="flex items-center justify-between p-3 sm:p-4 bg-[#FFF5F5] rounded-2xl border border-[#FFD7D7] gap-2">
+                          <span className="font-medium text-[#4A4A3A] truncate">@{userData.username}</span>
+                          <span className="text-[10px] text-[#E86B6B] uppercase font-bold shrink-0">Active</span>
                         </div>
                       ) : (
                         <div className="space-y-2">
@@ -1892,12 +1962,12 @@ function App() {
                                 setUsernameError(null);
                               }}
                               placeholder="choose_a_username"
-                              className="flex-1 p-4 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-2xl focus:outline-none focus:border-[#E86B6B] transition-all text-sm"
+                              className="flex-1 min-w-0 p-3 sm:p-4 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-2xl focus:outline-none focus:border-[#E86B6B] transition-all text-sm"
                             />
                             <button 
                               onClick={handleSetUsername}
                               disabled={isSettingUsername || !usernameInput}
-                              className="px-6 bg-[#E86B6B] text-white rounded-2xl text-xs font-bold uppercase tracking-widest disabled:opacity-50"
+                              className="px-4 sm:px-6 shrink-0 bg-[#E86B6B] text-white rounded-2xl text-xs font-bold uppercase tracking-widest disabled:opacity-50"
                             >
                               {isSettingUsername ? '...' : 'Set'}
                             </button>
@@ -1911,30 +1981,37 @@ function App() {
 
                     <div className="space-y-2">
                       <label className="text-[10px] font-sans font-bold uppercase tracking-widest text-[#8C8970]">Profile Details</label>
+                      <div className="flex items-center gap-3 sm:gap-4 mb-4">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden border-2 border-[#FFD7D7] bg-[#FFF5F5] flex-shrink-0">
+                          {userData?.profilePic ? (
+                            <img src={userData.profilePic} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-2xl font-serif italic text-[#E86B6B]">
+                              {userData?.name?.[0] || '?'}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-[#4A4A3A] truncate">{userData?.name || 'N/A'}</div>
+                          <div className="text-[10px] text-[#8C8970] uppercase tracking-widest truncate">{userData?.zodiac || 'N/A'}</div>
+                        </div>
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="p-3 bg-[#FFF5F5]/50 rounded-xl border border-[#FFD7D7]">
-                          <div className="text-[8px] uppercase text-[#8C8970] font-bold">Name</div>
-                          <div className="text-xs font-medium text-[#4A4A3A]">{userData?.name || 'N/A'}</div>
+                        <div className="p-2 sm:p-3 bg-[#FFF5F5]/50 rounded-xl border border-[#FFD7D7] min-w-0">
+                          <div className="text-[8px] uppercase text-[#8C8970] font-bold truncate">Age</div>
+                          <div className="text-xs font-medium text-[#4A4A3A] truncate">{userData?.age || 'N/A'}</div>
                         </div>
-                        <div className="p-3 bg-[#FFF5F5]/50 rounded-xl border border-[#FFD7D7]">
-                          <div className="text-[8px] uppercase text-[#8C8970] font-bold">Age</div>
-                          <div className="text-xs font-medium text-[#4A4A3A]">{userData?.age || 'N/A'}</div>
+                        <div className="p-2 sm:p-3 bg-[#FFF5F5]/50 rounded-xl border border-[#FFD7D7] min-w-0">
+                          <div className="text-[8px] uppercase text-[#8C8970] font-bold truncate">Gender</div>
+                          <div className="text-xs font-medium text-[#4A4A3A] truncate">{userData?.gender || 'N/A'}</div>
                         </div>
-                        <div className="p-3 bg-[#FFF5F5]/50 rounded-xl border border-[#FFD7D7]">
-                          <div className="text-[8px] uppercase text-[#8C8970] font-bold">Gender</div>
-                          <div className="text-xs font-medium text-[#4A4A3A]">{userData?.gender || 'N/A'}</div>
+                        <div className="p-2 sm:p-3 bg-[#FFF5F5]/50 rounded-xl border border-[#FFD7D7] min-w-0">
+                          <div className="text-[8px] uppercase text-[#8C8970] font-bold truncate">Country</div>
+                          <div className="text-xs font-medium text-[#4A4A3A] truncate">{userData?.country || 'N/A'}</div>
                         </div>
-                        <div className="p-3 bg-[#FFF5F5]/50 rounded-xl border border-[#FFD7D7]">
-                          <div className="text-[8px] uppercase text-[#8C8970] font-bold">Zodiac</div>
-                          <div className="text-xs font-medium text-[#4A4A3A]">{userData?.zodiac || 'N/A'}</div>
-                        </div>
-                        <div className="p-3 bg-[#FFF5F5]/50 rounded-xl border border-[#FFD7D7]">
-                          <div className="text-[8px] uppercase text-[#8C8970] font-bold">Country</div>
-                          <div className="text-xs font-medium text-[#4A4A3A]">{userData?.country || 'N/A'}</div>
-                        </div>
-                        <div className="p-3 bg-[#FFF5F5]/50 rounded-xl border border-[#FFD7D7]">
-                          <div className="text-[8px] uppercase text-[#8C8970] font-bold">Language</div>
-                          <div className="text-xs font-medium text-[#4A4A3A]">{userData?.language || 'N/A'}</div>
+                        <div className="p-2 sm:p-3 bg-[#FFF5F5]/50 rounded-xl border border-[#FFD7D7] min-w-0">
+                          <div className="text-[8px] uppercase text-[#8C8970] font-bold truncate">Language</div>
+                          <div className="text-xs font-medium text-[#4A4A3A] truncate">{userData?.language || 'N/A'}</div>
                         </div>
                       </div>
                     </div>
@@ -1947,15 +2024,15 @@ function App() {
                             lookingForLove: !userData.lookingForLove
                           });
                         }}
-                        className={`w-full p-4 rounded-2xl border flex items-center justify-between transition-all ${userData?.lookingForLove ? 'bg-[#FFF5F5] border-[#E86B6B]' : 'bg-white border-[#FFD7D7]'}`}
+                        className={`w-full p-3 sm:p-4 rounded-2xl border flex items-center justify-between transition-all gap-2 ${userData?.lookingForLove ? 'bg-[#FFF5F5] border-[#E86B6B]' : 'bg-white border-[#FFD7D7]'}`}
                       >
-                        <div className="flex items-center gap-3">
-                          <Heart size={18} className={userData?.lookingForLove ? 'text-[#E86B6B]' : 'text-[#8C8970]'} fill={userData?.lookingForLove ? 'currentColor' : 'none'} />
-                          <span className={`text-sm font-medium ${userData?.lookingForLove ? 'text-[#E86B6B]' : 'text-[#8C8970]'}`}>
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                          <Heart size={18} className={`shrink-0 ${userData?.lookingForLove ? 'text-[#E86B6B]' : 'text-[#8C8970]'}`} fill={userData?.lookingForLove ? 'currentColor' : 'none'} />
+                          <span className={`text-xs sm:text-sm font-medium truncate ${userData?.lookingForLove ? 'text-[#E86B6B]' : 'text-[#8C8970]'}`}>
                             {userData?.lookingForLove ? 'Looking for Love' : 'Friend Mode Only'}
                           </span>
                         </div>
-                        <div className={`w-10 h-5 rounded-full relative transition-all ${userData?.lookingForLove ? 'bg-[#E86B6B]' : 'bg-[#8C8970]/20'}`}>
+                        <div className={`w-10 h-5 rounded-full relative transition-all shrink-0 ${userData?.lookingForLove ? 'bg-[#E86B6B]' : 'bg-[#8C8970]/20'}`}>
                           <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${userData?.lookingForLove ? 'right-1' : 'left-1'}`} />
                         </div>
                       </button>
@@ -1964,9 +2041,9 @@ function App() {
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <label className="text-[10px] font-sans font-bold uppercase tracking-widest text-[#8C8970]">Your ID (Backup)</label>
-                        <button onClick={copyId} className="text-[10px] text-[#E86B6B] font-bold uppercase hover:underline">Copy</button>
+                        <button onClick={copyId} className="text-[10px] text-[#E86B6B] font-bold uppercase hover:underline shrink-0 ml-2">Copy</button>
                       </div>
-                      <div className="p-4 bg-[#FFF5F5] rounded-2xl font-mono text-[10px] break-all select-all border border-[#FFD7D7] opacity-60">{user.uid}</div>
+                      <div className="p-3 sm:p-4 bg-[#FFF5F5] rounded-2xl font-mono text-[10px] break-all select-all border border-[#FFD7D7] opacity-60">{user.uid}</div>
                     </div>
 
                     <div className="space-y-3 pt-2">
@@ -1974,14 +2051,14 @@ function App() {
                       <div className="grid grid-cols-2 gap-2">
                         <a 
                           href="mailto:emojibadges@zohomail.in" 
-                          className="flex items-center gap-2 p-3 bg-[#FFF5F5] rounded-xl border border-[#FFD7D7] hover:bg-[#E86B6B]/5 transition-all"
+                          className="flex items-center gap-1 sm:gap-2 p-2 sm:p-3 bg-[#FFF5F5] rounded-xl border border-[#FFD7D7] hover:bg-[#E86B6B]/5 transition-all min-w-0"
                         >
-                          <Mail size={14} className="text-[#E86B6B]" />
-                          <span className="text-[10px] font-bold text-[#4A4A3A] uppercase tracking-widest">Support</span>
+                          <Mail size={14} className="text-[#E86B6B] shrink-0" />
+                          <span className="text-[9px] sm:text-[10px] font-bold text-[#4A4A3A] uppercase tracking-widest truncate">Support</span>
                         </a>
-                        <div className="flex items-center gap-2 p-3 bg-[#FDFCF8] rounded-xl border border-[#D4A373]/20">
-                          <ShieldCheck size={14} className="text-[#D4A373]" />
-                          <span className="text-[9px] font-bold text-[#8C8970] uppercase tracking-widest">Crea8tiv Team</span>
+                        <div className="flex items-center gap-1 sm:gap-2 p-2 sm:p-3 bg-[#FDFCF8] rounded-xl border border-[#D4A373]/20 min-w-0">
+                          <ShieldCheck size={14} className="text-[#D4A373] shrink-0" />
+                          <span className="text-[8px] sm:text-[9px] font-bold text-[#8C8970] uppercase tracking-widest truncate">Crea8tiv Team</span>
                         </div>
                       </div>
                     </div>
@@ -1992,11 +2069,12 @@ function App() {
                           auth.signOut();
                           setShowSettings(false);
                         }}
-                        className="w-full py-4 text-[10px] font-bold uppercase tracking-widest text-[#E86B6B] hover:bg-[#E86B6B]/5 rounded-2xl transition-all"
+                        className="w-full py-3 sm:py-4 text-[10px] font-bold uppercase tracking-widest text-[#E86B6B] hover:bg-[#E86B6B]/5 rounded-2xl transition-all"
                       >
                         Sign Out
                       </button>
                     </div>
+                  </div>
                   </div>
                 </motion.div>
               </motion.div>
@@ -2023,9 +2101,13 @@ function App() {
                       <ArrowLeft size={24} />
                     </button>
                     <div className="relative">
-                      <div className="w-10 h-10 bg-[#E86B6B] rounded-xl flex items-center justify-center text-white font-serif italic text-lg shadow-sm">
-                        {selectedChatUser.name[0]}
-                      </div>
+                      {selectedChatUser.profilePic ? (
+                        <img src={selectedChatUser.profilePic} alt={selectedChatUser.name} className="w-10 h-10 rounded-xl object-cover border border-[#FFD7D7] shadow-sm" referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="w-10 h-10 bg-[#E86B6B] rounded-xl flex items-center justify-center text-white font-serif italic text-lg shadow-sm">
+                          {selectedChatUser.name[0]}
+                        </div>
+                      )}
                       {selectedChatUser.lastSeen?.toMillis && selectedChatUser.lastSeen.toMillis() > Date.now() - 300000 && (
                         <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
                       )}
@@ -2059,9 +2141,13 @@ function App() {
                             onClick={() => setSelectedChatUser(match)}
                             className="flex-shrink-0 flex items-center gap-2 p-2 bg-white rounded-xl border border-[#FFD7D7] hover:border-[#E86B6B] transition-all max-w-[140px] overflow-hidden"
                           >
-                            <div className="w-6 h-6 bg-[#E86B6B]/10 rounded-lg flex-shrink-0 flex items-center justify-center text-[#E86B6B] text-[10px] font-serif italic">
-                              {match.name[0]}
-                            </div>
+                            {match.profilePic ? (
+                              <img src={match.profilePic} alt={match.name} className="w-6 h-6 rounded-lg object-cover flex-shrink-0" referrerPolicy="no-referrer" />
+                            ) : (
+                              <div className="w-6 h-6 bg-[#E86B6B]/10 rounded-lg flex-shrink-0 flex items-center justify-center text-[#E86B6B] text-[10px] font-serif italic">
+                                {match.name[0]}
+                              </div>
+                            )}
                             <span className="text-[10px] font-medium text-[#4A4A3A] truncate">{match.name}</span>
                           </button>
                         ))}
@@ -2213,17 +2299,31 @@ function App() {
                     </div>
                     
                     <div className="flex gap-2">
-                      <input 
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && chatInput && sendChatMessage('text', chatInput)}
-                        placeholder="Type a message..."
-                        className="flex-1 p-4 bg-[#FFF5F5]/50 border border-[#FFD7D7] rounded-2xl focus:outline-none focus:border-[#E86B6B] transition-all text-sm"
-                      />
+                      <div className="flex-1 relative">
+                        <AnimatePresence>
+                          {chatError && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10 }} 
+                              animate={{ opacity: 1, y: 0 }} 
+                              exit={{ opacity: 0, y: 10 }}
+                              className="absolute -top-10 left-0 right-0 bg-red-100 text-red-600 text-[10px] font-bold uppercase tracking-widest p-2 rounded-xl text-center border border-red-200 shadow-sm"
+                            >
+                              {chatError}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                        <input 
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && chatInput && sendChatMessage('text', chatInput)}
+                          placeholder="Type a message..."
+                          className="w-full p-4 bg-[#FFF5F5]/50 border border-[#FFD7D7] rounded-2xl focus:outline-none focus:border-[#E86B6B] transition-all text-sm"
+                        />
+                      </div>
                       <button 
                         onClick={() => chatInput && sendChatMessage('text', chatInput)}
                         disabled={!chatInput}
-                        className="p-4 bg-[#E86B6B] text-white rounded-2xl disabled:opacity-50 hover:shadow-lg transition-all"
+                        className="p-4 bg-[#E86B6B] text-white rounded-2xl disabled:opacity-50 hover:shadow-lg transition-all shrink-0"
                       >
                         <Send size={20} />
                       </button>
