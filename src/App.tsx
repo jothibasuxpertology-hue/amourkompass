@@ -1185,6 +1185,10 @@ function App() {
               <LogIn size={18} />
               Begin Your Journey
             </button>
+
+            <div className="pt-8 text-[8px] font-sans font-bold uppercase tracking-[0.4em] text-[#D4A373]/40">
+              All rights reserved for Amour Compass by Crea8tiv
+            </div>
           </motion.div>
         </motion.div>
       ) : showWelcome ? (
@@ -1244,6 +1248,10 @@ function App() {
           {/* Gold Accent Lines */}
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#D4A373]/30 to-transparent" />
           <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#D4A373]/30 to-transparent" />
+          
+          <div className="absolute bottom-8 text-[8px] font-sans font-bold uppercase tracking-[0.4em] text-[#D4A373]/40 z-10">
+            All rights reserved for Amour Compass by Crea8tiv
+          </div>
         </motion.div>
       ) : showOnboarding ? (
         <motion.div 
@@ -1925,7 +1933,7 @@ function App() {
             {/* Home Page Footer - Minimal */}
             <footer className="w-full mt-12 pb-8 border-t border-[#FFD7D7] pt-8 text-center">
               <div className="text-[8px] font-sans font-bold uppercase tracking-[0.4em] text-[#D4A373]/40">
-                © 2026 Amour Compass • All Rights Reserved
+                All rights reserved for Amour Compass by Crea8tiv
               </div>
             </footer>
           </main>
