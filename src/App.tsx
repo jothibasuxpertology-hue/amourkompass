@@ -297,6 +297,7 @@ function App() {
   const [dismissedLoveMatchId, setDismissedLoveMatchId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ name: string; text: string; uid: string } | null>(null);
   const [sensorStatus, setSensorStatus] = useState<'inactive' | 'active' | 'stuck' | 'relative'>('inactive');
+  const [hasAcceptedSafetyWarning, setHasAcceptedSafetyWarning] = useState(false);
   const lastHeadingRef = useRef(0);
   const lastHeadingTimeRef = useRef(Date.now());
 
@@ -306,7 +307,7 @@ function App() {
     country: 'United States',
     language: 'English',
     gender: 'Male',
-    age: 13,
+    age: 18,
     zodiac: 'Aries',
     targetCountry: 'United States',
     lookingForLove: true,
@@ -320,7 +321,7 @@ function App() {
         country: userData.country || 'United States',
         language: userData.language || 'English',
         gender: userData.gender || 'Male',
-        age: userData.age || 13,
+        age: userData.age || 18,
         zodiac: userData.zodiac || 'Aries',
         targetCountry: userData.targetCountry || 'United States',
         lookingForLove: userData.lookingForLove || false,
@@ -509,7 +510,13 @@ function App() {
         const isZodiacCompatible = ZODIAC_COMPATIBILITY[myZodiac]?.includes(otherZodiac);
         if (!isZodiacCompatible) return false;
 
-        const ageDiff = Math.abs((userData.age || 0) - (m.age || 0));
+        // Age-restricted matching logic:
+        // 1. Both must be 18 or above.
+        // 2. Allow up to 10 years gap.
+        const myAge = userData.age || 0;
+        const otherAge = m.age || 0;
+        const ageDiff = Math.abs(myAge - otherAge);
+
         return ageDiff <= 10;
       });
       
@@ -677,6 +684,7 @@ function App() {
     const handlePopState = () => {
       if (selectedChatUser) {
         setSelectedChatUser(null);
+        setHasAcceptedSafetyWarning(false);
       } else if (showSettings) {
         setShowSettings(false);
       }
@@ -702,17 +710,23 @@ function App() {
 
   const closeChat = () => {
     setSelectedChatUser(null);
+    setHasAcceptedSafetyWarning(false);
     if (window.history.state?.modalOpen) {
       window.history.back();
     }
+  };
+
+  const openChat = (chatUser: any) => {
+    setHasAcceptedSafetyWarning(false);
+    setSelectedChatUser(chatUser);
   };
 
   const handleOnboardingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     
-    if (onboardingData.age < 13) {
-      alert("You must be at least 13 years old to use Amour Compass.");
+    if (onboardingData.age < 18) {
+      setNotification({ name: "Age Restricted", text: "If you are under 18, you can't enter.", uid: "system" });
       return;
     }
 
@@ -903,6 +917,22 @@ function App() {
       const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.(com|org|net|io|me|co|us|uk|ca|de|fr|in|app|dev|link|xyz)(\/[^\s]*)?)/i;
       if (urlRegex.test(content)) {
         setChatError("External links are not allowed in the chat.");
+        setTimeout(() => setChatError(null), 3000);
+        return;
+      }
+
+      // Prevent sending forbidden words (drugs, sex, harassment)
+      const forbiddenWordsRegex = /\b(drug|drugs|sex|porn|sexual|harass|harassment|abuse|rape|kill|suicide|nude|naked|slut|whore|bitch|cunt|dick|pussy|cock|vagina)\b/i;
+      if (forbiddenWordsRegex.test(content)) {
+        setChatError("Inappropriate content is not allowed.");
+        setTimeout(() => setChatError(null), 3000);
+        return;
+      }
+
+      // Prevent sending continuous numbers (phone numbers, OTPs)
+      const continuousNumbersRegex = /\d{10,}/;
+      if (continuousNumbersRegex.test(content.replace(/\s/g, ''))) {
+        setChatError("You cannot send 10 or more continuous numbers for safety.");
         setTimeout(() => setChatError(null), 3000);
         return;
       }
@@ -1274,7 +1304,7 @@ function App() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Age</label>
-                  <input required type="number" min="13" value={onboardingData.age} onChange={e => setOnboardingData({...onboardingData, age: parseInt(e.target.value)})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" />
+                  <input required type="number" min="18" value={onboardingData.age} onChange={e => setOnboardingData({...onboardingData, age: parseInt(e.target.value)})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
@@ -1382,7 +1412,7 @@ function App() {
                 onClick={() => {
                   const chatUser = userChats.find(c => c.otherUser.uid === notification.uid)?.otherUser;
                   if (chatUser) {
-                    setSelectedChatUser(chatUser);
+                    openChat(chatUser);
                     setActiveTab('messages');
                   }
                   setNotification(null);
@@ -1497,7 +1527,7 @@ function App() {
                   <div className="space-y-3 pt-2">
                     <button 
                       onClick={() => {
-                        setSelectedChatUser(activeLoveMatch);
+                        openChat(activeLoveMatch);
                         setDismissedLoveMatchId(activeLoveMatch.uid);
                         setActiveLoveMatch(null);
                       }}
@@ -1640,7 +1670,7 @@ function App() {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 20 }}
-                            onClick={() => setSelectedChatUser(match)}
+                            onClick={() => openChat(match)}
                             className="w-full bg-white/80 backdrop-blur-sm p-4 md:p-5 rounded-[2rem] border border-[#FFD7D7] flex items-center justify-between shadow-sm gap-3 overflow-hidden cursor-pointer hover:bg-white transition-all group"
                           >
                             <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
@@ -1685,7 +1715,7 @@ function App() {
                                   <Heart size={12} className="md:w-3.5 md:h-3.5" />
                                 </button>
                                 <button 
-                                  onClick={(e) => { e.stopPropagation(); setSelectedChatUser(match); }}
+                                  onClick={(e) => { e.stopPropagation(); openChat(match); }}
                                   className="p-1.5 md:p-2 rounded-xl border border-[#FFD7D7] bg-white text-[#8C8970] hover:text-[#E86B6B] transition-all"
                                 >
                                   <MessageCircle size={12} className="md:w-3.5 md:h-3.5" />
@@ -1769,7 +1799,7 @@ function App() {
                             key={chat.id}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            onClick={() => setSelectedChatUser(chat.otherUser)}
+                            onClick={() => openChat(chat.otherUser)}
                             className={`w-full p-5 rounded-[2rem] border flex items-center justify-between shadow-sm cursor-pointer transition-all ${
                               isUnread ? 'bg-white border-[#E86B6B] ring-1 ring-[#E86B6B]/10' : 'bg-white/80 border-[#FFD7D7] hover:bg-white'
                             }`}
@@ -1825,7 +1855,7 @@ function App() {
                           key={saved.uid}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          onClick={() => setSelectedChatUser(saved)}
+                          onClick={() => openChat(saved)}
                           className="w-full bg-white p-4 md:p-5 rounded-[2rem] border border-[#FFD7D7] flex items-center justify-between shadow-sm gap-3 overflow-hidden cursor-pointer hover:bg-[#FFF5F5] transition-all group"
                         >
                           <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
@@ -1848,7 +1878,7 @@ function App() {
                           </div>
                           <div className="flex gap-1 flex-shrink-0">
                             <button 
-                              onClick={(e) => { e.stopPropagation(); setSelectedChatUser(saved); }}
+                              onClick={(e) => { e.stopPropagation(); openChat(saved); }}
                               className="p-2 md:p-3 text-[#D4A373] hover:bg-[#D4A373]/5 rounded-xl transition-all"
                             >
                               <MessageCircle size={18} />
@@ -1883,7 +1913,7 @@ function App() {
                           key={saved.uid}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          onClick={() => setSelectedChatUser(saved)}
+                          onClick={() => openChat(saved)}
                           className="w-full bg-white p-4 md:p-5 rounded-[2rem] border border-[#FFD7D7] flex items-center justify-between shadow-sm gap-3 overflow-hidden cursor-pointer hover:bg-[#FFF5F5] transition-all group"
                         >
                           <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
@@ -1906,7 +1936,7 @@ function App() {
                           </div>
                           <div className="flex gap-1 flex-shrink-0">
                             <button 
-                              onClick={(e) => { e.stopPropagation(); setSelectedChatUser(saved); }}
+                              onClick={(e) => { e.stopPropagation(); openChat(saved); }}
                               className="p-2 md:p-3 text-[#E86B6B] hover:bg-[#E86B6B]/5 rounded-xl transition-all"
                             >
                               <MessageCircle size={18} />
@@ -2099,7 +2129,47 @@ function App() {
                 transition={{ type: 'spring', damping: 30, stiffness: 300 }}
                 className="fixed inset-0 z-[110] bg-[#FDFCF8] flex flex-col overflow-hidden"
               >
-                {/* Chat Header */}
+                {!hasAcceptedSafetyWarning ? (
+                  <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-8 bg-gradient-to-b from-[#FFF5F5] to-white">
+                    <div className="w-24 h-24 bg-white rounded-[2.5rem] shadow-2xl flex items-center justify-center border border-[#FFD7D7] relative">
+                      <ShieldCheck size={48} className="text-[#D4A373]" />
+                      <motion.div 
+                        animate={{ scale: [1, 1.2, 1] }} 
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="absolute -top-2 -right-2 w-8 h-8 bg-[#E86B6B] rounded-full flex items-center justify-center text-white shadow-lg"
+                      >
+                        <Heart size={16} fill="white" />
+                      </motion.div>
+                    </div>
+                    
+                    <div className="space-y-4 max-w-sm">
+                      <h2 className="text-3xl font-serif text-[#D4A373]">Safety First, <span className="italic text-[#E86B6B]">Always</span></h2>
+                      <p className="text-sm text-[#8C8970] leading-relaxed">
+                        To keep our community beautiful and safe, please remember to <span className="font-bold text-[#4A4A3A]">never share</span> sensitive information like your <span className="text-[#E86B6B]">phone number, email, address, or OTPs</span>.
+                      </p>
+                      <p className="text-xs italic text-[#8C8970]">
+                        True connections are built on trust and respect.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col w-full max-w-xs gap-3">
+                      <button 
+                        onClick={() => setHasAcceptedSafetyWarning(true)}
+                        className="w-full py-5 bg-[#E86B6B] text-white rounded-full font-sans font-bold tracking-[0.2em] uppercase text-xs shadow-xl shadow-[#E86B6B]/20 hover:scale-105 transition-all"
+                      >
+                        I Understand & Agree
+                      </button>
+                      <button 
+                        onClick={closeChat}
+                        className="w-full py-4 text-[#8C8970] font-sans font-bold tracking-[0.2em] uppercase text-[10px] hover:text-[#4A4A3A] transition-all"
+                      >
+                        Go Back
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Chat Header */}
                 <div className="pt-12 pb-4 px-6 border-b border-[#FFD7D7] flex justify-between items-center bg-white shadow-sm">
                   <div className="flex items-center gap-3">
                     <button 
@@ -2146,7 +2216,7 @@ function App() {
                         {soulmateMatches.filter(m => m.uid !== selectedChatUser.uid).map(match => (
                           <button 
                             key={match.uid}
-                            onClick={() => setSelectedChatUser(match)}
+                            onClick={() => openChat(match)}
                             className="flex-shrink-0 flex items-center gap-2 p-2 bg-white rounded-xl border border-[#FFD7D7] hover:border-[#E86B6B] transition-all max-w-[140px] overflow-hidden"
                           >
                             {match.profilePic ? (
@@ -2337,7 +2407,9 @@ function App() {
                       </button>
                     </div>
                   </div>
-                </motion.div>
+                  </>
+                )}
+              </motion.div>
             )}
           </AnimatePresence>
 

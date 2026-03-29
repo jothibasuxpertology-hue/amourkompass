@@ -11,7 +11,7 @@
         "country": { "type": "string" },
         "origin": { "type": "string" },
         "gender": { "type": "string" },
-        "age": { "type": "number" },
+        "age": { "type": "number", "description": "User age, must be 18 or older." },
         "zodiac": { "type": "string" },
         "targetCountry": { "type": "string" },
         "heading": { "type": "number" },
