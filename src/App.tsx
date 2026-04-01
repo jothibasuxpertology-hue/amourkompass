@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Component } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Component } from 'react';
 import { motion, AnimatePresence, useSpring } from 'motion/react';
 import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft, Download, Share2, Check, XCircle, ShieldCheck, Instagram, Mail } from 'lucide-react';
 import { toPng } from 'html-to-image';
@@ -270,6 +270,14 @@ function App() {
   // Friend State
   const [userData, setUserData] = useState<any>(null);
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const activeUsersCount = useMemo(() => {
+    const now = Date.now();
+    const active = allUsers.filter(u => {
+      const lastSeen = u.lastSeen?.toMillis ? u.lastSeen.toMillis() : 0;
+      return lastSeen > now - 300000; // 5 minutes
+    });
+    return active.length + 1; // +1 for the current user
+  }, [allUsers]);
   const [soulmateMatches, setSoulmateMatches] = useState<any[]>([]);
   const [friendData, setFriendData] = useState<any>(null);
   const [friendIdInput, setFriendIdInput] = useState('');
@@ -301,23 +309,6 @@ function App() {
   const [hasAcceptedSafetyWarning, setHasAcceptedSafetyWarning] = useState(false);
   const lastHeadingRef = useRef(0);
   const lastHeadingTimeRef = useRef(Date.now());
-  
-  const formatNumber = (num: number) => {
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(num % 1000000 === 0 ? 0 : 1).toLowerCase() + 'm';
-    }
-    if (num >= 1000) {
-      return (num / 1000).toFixed(num % 1000 === 0 ? 0 : 1).toLowerCase() + 'k';
-    }
-    return num.toString();
-  };
-
-  const onlineUsersCount = React.useMemo(() => {
-    return allUsers.filter(other => {
-      const lastSeen = other.lastSeen?.toMillis ? other.lastSeen.toMillis() : 0;
-      return lastSeen > Date.now() - 300000; // Active in last 5 minutes
-    }).length + 1; // +1 for current user
-  }, [allUsers]);
 
   // Onboarding State
   const [onboardingData, setOnboardingData] = useState({
@@ -1668,13 +1659,7 @@ function App() {
                   <MapPin size={12} />
                   {location ? `${location.lat.toFixed(3)}, ${location.lng.toFixed(3)}` : "Locating..."}
                 </div>
-                <h1 className="text-3xl font-serif text-[#D4A373] flex items-baseline gap-2">
-                  Amour <span className="italic text-[#E86B6B]">Compass</span>
-                  <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 border border-emerald-100 rounded-full">
-                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                    <span className="text-[8px] font-sans font-bold text-emerald-600 uppercase tracking-widest">{formatNumber(onlineUsersCount)} Online</span>
-                  </div>
-                </h1>
+                <h1 className="text-3xl font-serif text-[#D4A373]">Amour <span className="italic text-[#E86B6B]">Compass</span></h1>
               </div>
               <div className="flex gap-2">
                 <div className="flex bg-white rounded-2xl p-1 shadow-sm border border-[#FFD7D7]">
@@ -1780,6 +1765,19 @@ function App() {
 
                 {/* Soulmate Matches */}
                 <div className="w-full space-y-4">
+                  {/* User Count Badge (Moved above Potential Soulmates) */}
+                  <div className="flex justify-center">
+                    <motion.div 
+                      initial={{ y: 10, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      className="bg-white/60 backdrop-blur-sm border border-[#FFD7D7] rounded-full px-4 py-1.5 shadow-sm flex items-center gap-2"
+                    >
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                      <Users size={14} className="text-[#E86B6B]" />
+                      <span className="text-xs font-bold text-[#4A4A3A] tabular-nums">{activeUsersCount} Explorers Online</span>
+                    </motion.div>
+                  </div>
+
                   <div className="flex items-center justify-between px-2">
                     <h3 className="text-xs font-sans font-bold uppercase tracking-widest text-[#8C8970]">Potential Soulmates</h3>
                     <span className="text-[10px] font-sans font-bold text-emerald-500 uppercase tracking-widest">{soulmateMatches.length} Active</span>
