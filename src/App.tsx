@@ -301,6 +301,23 @@ function App() {
   const [hasAcceptedSafetyWarning, setHasAcceptedSafetyWarning] = useState(false);
   const lastHeadingRef = useRef(0);
   const lastHeadingTimeRef = useRef(Date.now());
+  
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(num % 1000000 === 0 ? 0 : 1).toLowerCase() + 'm';
+    }
+    if (num >= 1000) {
+      return (num / 1000).toFixed(num % 1000 === 0 ? 0 : 1).toLowerCase() + 'k';
+    }
+    return num.toString();
+  };
+
+  const onlineUsersCount = React.useMemo(() => {
+    return allUsers.filter(other => {
+      const lastSeen = other.lastSeen?.toMillis ? other.lastSeen.toMillis() : 0;
+      return lastSeen > Date.now() - 300000; // Active in last 5 minutes
+    }).length + 1; // +1 for current user
+  }, [allUsers]);
 
   // Onboarding State
   const [onboardingData, setOnboardingData] = useState({
@@ -683,11 +700,22 @@ function App() {
     const chatId = [user.uid, selectedChatUser.uid].sort().join('_');
     const updateLastRead = async () => {
       try {
-        await setDoc(doc(db, 'chats', chatId), {
-          lastRead: {
-            [user.uid]: serverTimestamp()
-          }
-        }, { merge: true });
+        const chatDoc = doc(db, 'chats', chatId);
+        const chatSnap = await getDoc(chatDoc);
+        
+        if (!chatSnap.exists()) {
+          await setDoc(chatDoc, {
+            participants: [user.uid, selectedChatUser.uid],
+            updatedAt: serverTimestamp(),
+            lastRead: {
+              [user.uid]: serverTimestamp()
+            }
+          });
+        } else {
+          await updateDoc(chatDoc, {
+            [`lastRead.${user.uid}`]: serverTimestamp()
+          });
+        }
       } catch (e) {
         console.error("Error updating lastRead:", e);
       }
@@ -1049,6 +1077,7 @@ function App() {
         });
 
         await setDoc(doc(db, 'chats', chatId), {
+          participants: [user.uid, selectedChatUser.uid],
           lastMessage: {
             text: `Generated a ${cardType} card!`,
             senderId: user.uid,
@@ -1639,7 +1668,13 @@ function App() {
                   <MapPin size={12} />
                   {location ? `${location.lat.toFixed(3)}, ${location.lng.toFixed(3)}` : "Locating..."}
                 </div>
-                <h1 className="text-3xl font-serif text-[#D4A373]">Amour <span className="italic text-[#E86B6B]">Compass</span></h1>
+                <h1 className="text-3xl font-serif text-[#D4A373] flex items-baseline gap-2">
+                  Amour <span className="italic text-[#E86B6B]">Compass</span>
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 border border-emerald-100 rounded-full">
+                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                    <span className="text-[8px] font-sans font-bold text-emerald-600 uppercase tracking-widest">{formatNumber(onlineUsersCount)} Online</span>
+                  </div>
+                </h1>
               </div>
               <div className="flex gap-2">
                 <div className="flex bg-white rounded-2xl p-1 shadow-sm border border-[#FFD7D7]">
