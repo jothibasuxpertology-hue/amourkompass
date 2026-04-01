@@ -261,6 +261,7 @@ import { PROFILE_PICS } from './profilePics';
 
 function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [heading, setHeading] = useState(0);
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -388,11 +389,12 @@ function App() {
 
   // Auth Listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (u) {
-        // Check if user has a complete profile
-        getDoc(doc(db, 'users', u.uid)).then(snap => {
+        try {
+          // Check if user has a complete profile
+          const snap = await getDoc(doc(db, 'users', u.uid));
           const data = snap.data();
           if (!snap.exists() || !data?.country || !data?.profilePic || !data?.age || !data?.zodiac) {
             setShowWelcome(true);
@@ -405,8 +407,11 @@ function App() {
               profilePic: data?.profilePic || ''
             }));
           }
-        });
+        } catch (error) {
+          console.error("Auth check error:", error);
+        }
       }
+      setIsAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -1190,7 +1195,24 @@ function App() {
 
   return (
     <AnimatePresence mode="wait">
-      {!user ? (
+      {isAuthLoading ? (
+        <motion.div 
+          key="loading"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="min-h-screen bg-[#FFF5F5] flex flex-col items-center justify-center p-6"
+        >
+          <motion.div 
+            animate={{ scale: [1, 1.1, 1], rotate: [0, 10, -10, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-24 h-24 bg-white rounded-[2rem] shadow-2xl flex items-center justify-center border border-[#FFD7D7]"
+          >
+            <Heart size={48} className="text-[#E86B6B]" fill="#E86B6B" />
+          </motion.div>
+          <p className="mt-8 text-[#D4A373] font-serif italic animate-pulse">Aligning your stars...</p>
+        </motion.div>
+      ) : !user ? (
         <motion.div 
           key="signin" 
           initial={{ opacity: 0 }} 
