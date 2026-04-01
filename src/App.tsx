@@ -311,8 +311,10 @@ function App() {
     zodiac: 'Aries',
     targetCountry: 'United States',
     lookingForLove: true,
-    profilePic: PROFILE_PICS[0]
+    profilePic: ''
   });
+
+  const [onboardingStep, setOnboardingStep] = useState(1);
 
   const openEditProfile = () => {
     if (userData) {
@@ -325,8 +327,9 @@ function App() {
         zodiac: userData.zodiac || 'Aries',
         targetCountry: userData.targetCountry || 'United States',
         lookingForLove: userData.lookingForLove || false,
-        profilePic: userData.profilePic || PROFILE_PICS[0]
+        profilePic: userData.profilePic || ''
       });
+      setOnboardingStep(1);
       setShowOnboarding(true);
       setShowSettings(false);
     }
@@ -388,11 +391,19 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
-        // Check if user has a profile
+        // Check if user has a complete profile
         getDoc(doc(db, 'users', u.uid)).then(snap => {
-          if (!snap.exists() || !snap.data().country) {
+          const data = snap.data();
+          if (!snap.exists() || !data?.country || !data?.profilePic || !data?.age || !data?.zodiac) {
             setShowWelcome(true);
-            setOnboardingData(prev => ({ ...prev, name: u.displayName || '' }));
+            setOnboardingData(prev => ({ 
+              ...prev, 
+              name: data?.name || u.displayName || '',
+              country: data?.country || 'United States',
+              age: data?.age || 18,
+              zodiac: data?.zodiac || 'Aries',
+              profilePic: data?.profilePic || ''
+            }));
           }
         });
       }
@@ -739,6 +750,7 @@ function App() {
         ...(userData ? {} : { relationshipType: 'love', heading: 0 })
       }, { merge: true });
       setShowOnboarding(false);
+      setOnboardingStep(1);
     } catch (error) {
       console.error("Onboarding error:", error);
     }
@@ -1293,90 +1305,141 @@ function App() {
         >
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md bg-white rounded-[2.5rem] shadow-xl border border-[#FFD7D7] flex flex-col max-h-[90vh] overflow-hidden">
             <div className="text-center space-y-2 p-6 sm:p-8 pb-4 shrink-0 bg-white z-10 border-b border-[#FFD7D7]/30">
-              <h2 className="text-2xl sm:text-3xl font-serif text-[#D4A373]">Your <span className="italic text-[#E86B6B]">profile please</span></h2>
-              <p className="text-xs sm:text-sm text-[#8C8970]">Tell us about yourself to find your match.</p>
+              <h2 className="text-2xl sm:text-3xl font-serif text-[#D4A373]">
+                {onboardingStep === 1 ? "Choose your " : "Almost "}
+                <span className="italic text-[#E86B6B]">{onboardingStep === 1 ? "Avatar" : "there"}</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-[#8C8970]">
+                {onboardingStep === 1 ? "Select an animated profile image to represent you." : "Just a few more details to find your match."}
+              </p>
             </div>
+
             <form onSubmit={handleOnboardingSubmit} className="space-y-4 overflow-y-auto p-6 sm:p-8 pt-4">
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Name</label>
-                  <input required value={onboardingData.name} onChange={e => setOnboardingData({...onboardingData, name: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Age</label>
-                  <input required type="number" min="18" value={onboardingData.age} onChange={e => setOnboardingData({...onboardingData, age: parseInt(e.target.value)})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Country</label>
-                  <select required value={onboardingData.country} onChange={e => setOnboardingData({...onboardingData, country: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
-                    {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Language</label>
-                  <input value={onboardingData.language} onChange={e => setOnboardingData({...onboardingData, language: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" placeholder="e.g. English, Spanish" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Gender</label>
-                  <select value={onboardingData.gender} onChange={e => setOnboardingData({...onboardingData, gender: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
-                    <option>Male</option>
-                    <option>Female</option>
-                    <option>Other</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Zodiac</label>
-                  <select value={onboardingData.zodiac} onChange={e => setOnboardingData({...onboardingData, zodiac: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
-                    {['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'].map(z => <option key={z}>{z}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Searching for soulmate in (Country)</label>
-                <select required value={onboardingData.targetCountry} onChange={e => setOnboardingData({...onboardingData, targetCountry: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
-                  <option value="Any">Any Country</option>
-                  {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Looking for Love?</label>
-                <div className="flex items-center gap-3 p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl">
-                  <input 
-                    type="checkbox" 
-                    checked={onboardingData.lookingForLove} 
-                    onChange={e => setOnboardingData({...onboardingData, lookingForLove: e.target.checked})}
-                    className="w-5 h-5 accent-[#E86B6B]"
-                  />
-                  <span className="text-sm text-[#4A4A3A]">Enable Love Compass</span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Choose Profile Picture</label>
-                <div className="grid grid-cols-5 gap-2 max-h-48 overflow-y-auto p-2 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl">
-                  {PROFILE_PICS.map((pic, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setOnboardingData({...onboardingData, profilePic: pic})}
-                      className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${onboardingData.profilePic === pic ? 'border-[#E86B6B] scale-105 shadow-md' : 'border-transparent hover:border-[#FFD7D7]'}`}
-                    >
-                      <img src={pic} alt={`Profile option ${idx + 1}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      {onboardingData.profilePic === pic && (
-                        <div className="absolute inset-0 bg-[#E86B6B]/10 flex items-center justify-center">
-                          <Check size={16} className="text-[#E86B6B] drop-shadow-md" />
+              {onboardingStep === 1 ? (
+                <div className="space-y-6">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-32 h-32 bg-[#FFF5F5] rounded-[2.5rem] border-4 border-[#FFD7D7] shadow-inner flex items-center justify-center overflow-hidden relative">
+                      {onboardingData.profilePic ? (
+                        <img src={onboardingData.profilePic} alt="Selected Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 text-[#D4A373]">
+                          <Sparkles size={32} className="animate-pulse" />
+                          <span className="text-[10px] font-bold uppercase tracking-widest">Select Below</span>
                         </div>
                       )}
-                    </button>
-                  ))}
+                    </div>
+                    <div className="space-y-1 w-full text-center">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Your Display Name</label>
+                      <input 
+                        required 
+                        placeholder="What should we call you?"
+                        value={onboardingData.name} 
+                        onChange={e => setOnboardingData({...onboardingData, name: e.target.value})} 
+                        className="w-full p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-2xl text-center text-lg font-serif" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970] block text-center">Animated Avatars</label>
+                    <div className="grid grid-cols-4 gap-3 p-4 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-3xl">
+                      {PROFILE_PICS.map((pic, idx) => (
+                        <motion.button
+                          key={idx}
+                          type="button"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => setOnboardingData({...onboardingData, profilePic: pic})}
+                          className={`relative aspect-square rounded-2xl overflow-hidden border-2 transition-all ${onboardingData.profilePic === pic ? 'border-[#E86B6B] shadow-lg ring-4 ring-[#E86B6B]/10' : 'border-transparent hover:border-[#FFD7D7] grayscale-[0.5] hover:grayscale-0'}`}
+                        >
+                          <img src={pic} alt={`Option ${idx + 1}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          {onboardingData.profilePic === pic && (
+                            <div className="absolute inset-0 bg-[#E86B6B]/10 flex items-center justify-center">
+                              <Check size={20} className="text-[#E86B6B] drop-shadow-md" />
+                            </div>
+                          )}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button 
+                    type="button"
+                    disabled={!onboardingData.profilePic || !onboardingData.name}
+                    onClick={() => setOnboardingStep(2)}
+                    className="w-full py-4 bg-[#E86B6B] text-white rounded-full font-bold uppercase tracking-widest text-xs shadow-lg shadow-[#E86B6B]/20 disabled:opacity-50 disabled:grayscale transition-all"
+                  >
+                    Continue to Details
+                  </button>
                 </div>
-              </div>
-              <button type="submit" className="w-full py-3 sm:py-4 bg-[#E86B6B] text-white rounded-full font-bold uppercase tracking-widest text-xs shadow-lg mt-4 shadow-[#E86B6B]/20">
-                Find my Soulmate
-              </button>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Age</label>
+                      <input required type="number" min="18" value={onboardingData.age} onChange={e => setOnboardingData({...onboardingData, age: parseInt(e.target.value)})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Gender</label>
+                      <select value={onboardingData.gender} onChange={e => setOnboardingData({...onboardingData, gender: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
+                        <option>Male</option>
+                        <option>Female</option>
+                        <option>Other</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Country</label>
+                      <select required value={onboardingData.country} onChange={e => setOnboardingData({...onboardingData, country: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
+                        {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Zodiac</label>
+                      <select value={onboardingData.zodiac} onChange={e => setOnboardingData({...onboardingData, zodiac: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
+                        {['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'].map(z => <option key={z}>{z}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Language</label>
+                    <input value={onboardingData.language} onChange={e => setOnboardingData({...onboardingData, language: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" placeholder="e.g. English, Spanish" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Searching for soulmate in (Country)</label>
+                    <select required value={onboardingData.targetCountry} onChange={e => setOnboardingData({...onboardingData, targetCountry: e.target.value})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm">
+                      <option value="Any">Any Country</option>
+                      {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Looking for Love?</label>
+                    <div className="flex items-center gap-3 p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl">
+                      <input 
+                        type="checkbox" 
+                        checked={onboardingData.lookingForLove} 
+                        onChange={e => setOnboardingData({...onboardingData, lookingForLove: e.target.checked})}
+                        className="w-5 h-5 accent-[#E86B6B]"
+                      />
+                      <span className="text-sm text-[#4A4A3A]">Enable Love Compass</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3 pt-4">
+                    <button 
+                      type="button"
+                      onClick={() => setOnboardingStep(1)}
+                      className="flex-1 py-4 bg-[#FFF5F5] text-[#E86B6B] border border-[#FFD7D7] rounded-full font-bold uppercase tracking-widest text-xs"
+                    >
+                      Back
+                    </button>
+                    <button type="submit" className="flex-[2] py-4 bg-[#E86B6B] text-white rounded-full font-bold uppercase tracking-widest text-xs shadow-lg shadow-[#E86B6B]/20">
+                      Find my Soulmate
+                    </button>
+                  </div>
+                </div>
+              )}
             </form>
           </motion.div>
         </motion.div>
