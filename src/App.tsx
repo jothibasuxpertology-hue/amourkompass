@@ -2325,6 +2325,13 @@ function App() {
                     >
                       <UserPlus size={18} />
                     </button>
+                    <button 
+                      onClick={() => toggleSaved(selectedChatUser.uid, 'loves')}
+                      className={`p-2 rounded-xl border transition-all ${userData?.loves?.includes(selectedChatUser.uid) ? 'bg-[#E86B6B] border-[#E86B6B] text-white' : 'bg-white border-[#FFD7D7] text-[#8C8970]'}`}
+                      title={userData?.loves?.includes(selectedChatUser.uid) ? "Remove from Love List" : "Add to Love List"}
+                    >
+                      <Heart size={18} />
+                    </button>
                   </div>
                 </div>
 
