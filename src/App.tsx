@@ -390,6 +390,7 @@ function App() {
   // Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      setIsAuthLoading(true);
       setUser(u);
       if (u) {
         try {
@@ -763,13 +764,16 @@ function App() {
 
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
+    setIsAuthLoading(true);
     try {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
       if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+        setIsAuthLoading(false);
         return;
       }
       console.error("Login error:", error);
+      setIsAuthLoading(false);
     }
   };
 
