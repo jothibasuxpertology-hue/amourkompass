@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, Component } from 'react';
 import { motion, AnimatePresence, useSpring } from 'motion/react';
 import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft, Download, Share2, Check, XCircle, ShieldCheck, Instagram, Mail, Globe } from 'lucide-react';
-import { toPng } from 'html-to-image';
+import { toBlob } from 'html-to-image';
 import { auth, db } from './firebase';
 import SoulmateGlobe from './components/SoulmateGlobe';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
@@ -99,7 +99,7 @@ const IPLFriendCard = ({
 
       <div className="z-10 w-full h-64 rounded-3xl overflow-hidden border-4 border-white shadow-xl relative bg-gray-100">
         {generatedImage ? (
-          <img src={generatedImage} alt="IPL Friendship" className="w-full h-full object-cover object-top" referrerPolicy="no-referrer" />
+          <img src={generatedImage} alt="IPL Friendship" className="w-full h-full object-cover object-top" crossOrigin="anonymous" referrerPolicy="no-referrer" />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-[#8C8970]">
             <Sparkles size={32} className="animate-pulse" />
@@ -406,7 +406,7 @@ function App() {
   const [chatInput, setChatInput] = useState('');
   const [chatError, setChatError] = useState<string | null>(null);
   const [isGeneratingCard, setIsGeneratingCard] = useState(false);
-  const [iplImage, setIplImage] = useState<string | null>("https://im.rediff.com/cricket/2025/mar/24dhoni-kohli.jpg?w=670&h=900");
+  const [iplImage, setIplImage] = useState<string | null>("https://images.weserv.nl/?url=im.rediff.com/cricket/2025/mar/24dhoni-kohli.jpg?w=670&h=900");
   const [isGeneratingIplImage, setIsGeneratingIplImage] = useState(false);
   const [cardToDownload, setCardToDownload] = useState<any>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -1252,8 +1252,8 @@ function App() {
 
   const generateIPLImage = async () => {
     if (iplImage) return;
-    // Use the specific high-quality image of Dhoni and Virat Kohli together
-    setIplImage("https://im.rediff.com/cricket/2025/mar/24dhoni-kohli.jpg?w=670&h=900");
+    // Use the specific high-quality image of Dhoni and Virat Kohli together with a proxy for CORS
+    setIplImage("https://images.weserv.nl/?url=im.rediff.com/cricket/2025/mar/24dhoni-kohli.jpg?w=670&h=900");
   };
 
   const requestIPLCard = async () => {
@@ -1319,11 +1319,24 @@ function App() {
       if (cardRef.current) {
         setIsGeneratingCard(true);
         try {
-          const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
+          // Add more robust options for toBlob
+          const blob = await toBlob(cardRef.current, { 
+            cacheBust: true, 
+            pixelRatio: 2, // Reduced pixel ratio for better compatibility
+            skipAutoScale: true,
+            includeQueryParams: true,
+          });
+          
+          if (!blob) throw new Error('Blob generation failed');
+          
+          const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.download = `amour-compass-${cardData.type}-${Date.now()}.png`;
-          link.href = dataUrl;
+          link.href = url;
           link.click();
+          
+          // Clean up the URL
+          setTimeout(() => URL.revokeObjectURL(url), 100);
           
           // If it's an IPL card, increment global counter and mark as downloaded in message
           if (cardData.type === 'ipl' && cardData.messageId) {
@@ -1344,7 +1357,7 @@ function App() {
           setCardToDownload(null);
         }
       }
-    }, 500);
+    }, 1000);
   };
 
   const copyId = () => {
