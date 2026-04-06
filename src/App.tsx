@@ -99,7 +99,7 @@ const IPLFriendCard = ({
 
       <div className="z-10 w-full h-64 rounded-3xl overflow-hidden border-4 border-white shadow-xl relative bg-gray-100">
         {generatedImage ? (
-          <img src={generatedImage} alt="IPL Friendship" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+          <img src={generatedImage} alt="IPL Friendship" className="w-full h-full object-cover object-top" referrerPolicy="no-referrer" />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-[#8C8970]">
             <Sparkles size={32} className="animate-pulse" />
@@ -406,7 +406,7 @@ function App() {
   const [chatInput, setChatInput] = useState('');
   const [chatError, setChatError] = useState<string | null>(null);
   const [isGeneratingCard, setIsGeneratingCard] = useState(false);
-  const [iplImage, setIplImage] = useState<string | null>(null);
+  const [iplImage, setIplImage] = useState<string | null>("https://im.rediff.com/cricket/2025/mar/24dhoni-kohli.jpg?w=670&h=900");
   const [isGeneratingIplImage, setIsGeneratingIplImage] = useState(false);
   const [cardToDownload, setCardToDownload] = useState<any>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -1252,8 +1252,8 @@ function App() {
 
   const generateIPLImage = async () => {
     if (iplImage) return;
-    // Use a high-quality template image instead of AI generation to save time and resources
-    setIplImage("https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=1000&auto=format&fit=crop");
+    // Use the specific high-quality image of Dhoni and Virat Kohli together
+    setIplImage("https://im.rediff.com/cricket/2025/mar/24dhoni-kohli.jpg?w=670&h=900");
   };
 
   const requestIPLCard = async () => {
