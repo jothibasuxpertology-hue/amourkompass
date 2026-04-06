@@ -15,6 +15,7 @@
         "zodiac": { "type": "string" },
         "targetCountry": { "type": "string" },
         "heading": { "type": "number" },
+        "iplTeam": { "type": "string", "enum": ["RCB", "CSK"], "description": "The user's chosen IPL team for the festival." },
         "location": {
           "type": "object",
           "properties": {
@@ -25,6 +26,8 @@
         "lastSeen": { "type": "string", "format": "date-time" },
         "relationshipType": { "type": "string", "enum": ["friend", "love"] },
         "lookingForLove": { "type": "boolean", "description": "Whether the user is actively looking for a romantic connection." },
+        "phoneNumber": { "type": "string", "description": "The user's verified phone number." },
+        "phoneNumberVerified": { "type": "boolean", "description": "Whether the phone number has been verified." },
         "friends": {
           "type": "array",
           "items": { "type": "string" },
@@ -37,6 +40,14 @@
         }
       },
       "required": ["uid", "name", "country", "gender", "age", "zodiac", "targetCountry", "lastSeen"]
+    },
+    "GlobalStats": {
+      "title": "Global Stats",
+      "description": "Global counters and statistics for the app.",
+      "type": "object",
+      "properties": {
+        "iplCardDownloads": { "type": "number", "description": "Total number of IPL friend cards downloaded." }
+      }
     },
     "UsernameMapping": {
       "title": "Username Mapping",
@@ -85,6 +96,10 @@
     "/usernames/{username}": {
       "schema": "UsernameMapping",
       "description": "Mapping of usernames to UIDs for uniqueness and lookup."
+    },
+    "/stats/global": {
+      "schema": "GlobalStats",
+      "description": "Global statistics and counters."
     },
     "/chats/{chatId}": {
       "schema": "Chat",

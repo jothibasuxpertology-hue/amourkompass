@@ -67,15 +67,20 @@ service cloud.firestore {
              username.matches("^[a-z0-9_]+$");
     }
 
+    function isValidUrl(url) {
+      return url is string &&
+             (url.matches("^https?://.*") || url.matches("^data:image/.*"));
+    }
+
     function isValidMessage(data) {
       return hasRequiredFields(['senderId', 'receiverId', 'timestamp', 'type']) &&
              data.senderId is string && data.receiverId is string &&
              data.timestamp is timestamp &&
-             data.type in ['text', 'emoji', 'card_request', 'card_generated'] &&
+             data.type in ['text', 'emoji', 'card_request', 'card_generated', 'card_request_ipl', 'card_generated_ipl'] &&
              (data.type == 'text' ? (data.text is string && data.text.trim().size() > 0 && data.text.size() <= 1000) : true) &&
              (data.type == 'emoji' ? (data.emoji is string && data.emoji.size() > 0 && data.emoji.size() <= 10) : true) &&
-             (data.type == 'card_request' ? (data.get('cardType', 'friendship') in ['soulmate', 'friendship'] && data.get('status', 'pending') in ['pending', 'accepted', 'declined']) : true) &&
-             (data.type == 'card_generated' ? (data.get('cardType', 'friendship') in ['soulmate', 'friendship']) : true);
+             (data.type in ['card_request', 'card_request_ipl'] ? (data.get('cardType', 'friendship') in ['soulmate', 'friendship', 'ipl'] && data.get('status', 'pending') in ['pending', 'accepted', 'declined']) : true) &&
+             (data.type in ['card_generated', 'card_generated_ipl'] ? (data.get('cardType', 'friendship') in ['soulmate', 'friendship', 'ipl'] && (data.get('downloaded', false) is bool)) : true);
     }
 
     function isCorrectChatId(chatId, uid1, uid2) {
@@ -94,12 +99,14 @@ service cloud.firestore {
              data.zodiac is string && data.targetCountry is string &&
              data.lastSeen is timestamp &&
              (data.get('username', null) == null || isValidUsername(data.username)) &&
-             (data.get('heading', 0) is number) &&
+             (data.get('heading', null) == null || data.heading is number) &&
              isValidLocation(data.get('location', null)) &&
-             (data.get('relationshipType', 'friend') in ['friend', 'love']) &&
-             (data.get('lookingForLove', false) is bool) &&
-             (data.get('friends', []) is list) &&
-             (data.get('loves', []) is list);
+             (data.get('relationshipType', null) == null || data.relationshipType in ['friend', 'love']) &&
+             (data.get('lookingForLove', null) == null || data.lookingForLove is bool) &&
+             (data.get('friends', null) == null || data.friends is list) &&
+             (data.get('loves', null) == null || data.loves is list) &&
+             (data.get('profilePic', null) == null || data.profilePic == '' || isValidUrl(data.profilePic)) &&
+             (data.get('iplTeam', null) == null || data.iplTeam == '' || data.iplTeam in ['RCB', 'CSK']);
     }
 
     match /users/{userId} {
@@ -114,6 +121,16 @@ service cloud.firestore {
       
       // Only admins can delete users
       allow delete: if isAdmin();
+    }
+
+    match /stats/global {
+      allow read: if isAuthenticated();
+      // Allow atomic increment of iplCardDownloads
+      allow update: if isAuthenticated() && 
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['iplCardDownloads']) &&
+                      request.resource.data.iplCardDownloads == resource.data.iplCardDownloads + 1;
+      // Allow initial creation by any authenticated user if it doesn't exist (simplified for this app)
+      allow create: if isAuthenticated() && hasOnlyAllowedFields(['iplCardDownloads']) && request.resource.data.iplCardDownloads == 0;
     }
 
     match /usernames/{username} {
@@ -137,10 +154,24 @@ service cloud.firestore {
                     (chatId.matches(".*" + request.auth.uid + ".*") || 
                      (resource != null && request.auth.uid in resource.data.participants));
       
-      // Allow write if user is a participant and data is valid
-      allow write: if isAuthenticated() && 
-                     chatId.matches(".*" + request.auth.uid + ".*") &&
-                     request.resource.data.participants.hasAll([request.auth.uid]);
+      // Allow create if user is a participant and provides correct participants for the chatId
+      allow create: if isAuthenticated() && 
+                      request.resource.data.participants.size() == 2 &&
+                      request.resource.data.participants.hasAll([request.auth.uid]) &&
+                      isCorrectChatId(chatId, request.resource.data.participants[0], request.resource.data.participants[1]);
+
+      // Allow update if user is a participant
+      allow update: if isAuthenticated() && 
+                      (chatId.matches(".*" + request.auth.uid + ".*") || 
+                       (resource != null && request.auth.uid in resource.data.participants)) &&
+                      (
+                        // Allow updating lastRead
+                        request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastRead']) ||
+                        // Allow updating lastMessage, updatedAt, etc.
+                        (request.resource.data.participants.size() == 2 &&
+                         request.resource.data.participants.hasAll([request.auth.uid]) &&
+                         isCorrectChatId(chatId, request.resource.data.participants[0], request.resource.data.participants[1]))
+                      );
     }
 
     match /chats/{chatId}/messages/{messageId} {
@@ -156,12 +187,19 @@ service cloud.firestore {
                       isCorrectChatId(chatId, request.resource.data.senderId, request.resource.data.receiverId) &&
                       exists(/databases/$(database)/documents/users/$(request.resource.data.receiverId));
 
-      // Allow update for card_request status
+      // Allow update for card_request status or card download status
       allow update: if isAuthenticated() &&
-                      resource.data.type == 'card_request' &&
-                      resource.data.receiverId == request.auth.uid &&
-                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
-                      request.resource.data.status in ['accepted', 'declined'];
+                      (
+                        ((resource.data.type == 'card_request' || resource.data.type == 'card_request_ipl') &&
+                         resource.data.receiverId == request.auth.uid &&
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+                         request.resource.data.status in ['accepted', 'declined']) ||
+                        ((resource.data.type == 'card_generated' || resource.data.type == 'card_generated_ipl') &&
+                         (resource.data.senderId == request.auth.uid || resource.data.receiverId == request.auth.uid) &&
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['downloaded']) &&
+                         request.resource.data.downloaded == true &&
+                         resource.data.downloaded == false)
+                      );
     }
   }
 }

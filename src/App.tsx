@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo, Component } from 'react';
 import { motion, AnimatePresence, useSpring } from 'motion/react';
-import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft, Download, Share2, Check, XCircle, ShieldCheck, Instagram, Mail } from 'lucide-react';
+import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft, Download, Share2, Check, XCircle, ShieldCheck, Instagram, Mail, Globe } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { auth, db } from './firebase';
+import SoulmateGlobe from './components/SoulmateGlobe';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, setDoc, getDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, updateDoc, addDoc, orderBy, limit } from 'firebase/firestore';
+import { doc, setDoc, getDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, updateDoc, addDoc, orderBy, limit, increment } from 'firebase/firestore';
 
 // Firestore Error Handling
 enum OperationType {
@@ -57,6 +58,112 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
+
+import { GoogleGenAI, Type } from "@google/genai";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// IPL Friend Card Component
+const IPLFriendCard = ({ 
+  user1, 
+  user2, 
+  rank,
+  generatedImage,
+  cardRef 
+}: { 
+  user1: any, 
+  user2: any,
+  rank: number,
+  generatedImage: string | null,
+  cardRef: React.RefObject<HTMLDivElement>
+}) => {
+  return (
+    <div 
+      ref={cardRef}
+      className="w-[320px] h-[560px] p-6 relative overflow-hidden flex flex-col items-center justify-between text-center bg-gradient-to-br from-[#E86B6B] via-white to-[#F9C80E]"
+      style={{ borderRadius: '40px' }}
+    >
+      {/* Decorative Elements */}
+      <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none">
+        <div className="absolute top-10 left-10 w-20 h-20 border-2 border-[#E86B6B] rounded-full rotate-45" />
+        <div className="absolute bottom-10 right-10 w-32 h-32 border border-[#F9C80E] rounded-full" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border border-[#E86B6B]/20 rounded-full" />
+      </div>
+
+      <div className="z-10 space-y-1">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <Sparkles size={16} className="text-[#E86B6B]" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#4A4A3A]">Amour Compass IPL Feast</span>
+        </div>
+        <h2 className="text-3xl font-serif text-[#4A4A3A]">
+          IPL Soulmates
+        </h2>
+        <p className="text-[10px] text-[#8C8970] italic">United by the game, connected by the heart</p>
+      </div>
+
+      <div className="z-10 w-full h-64 rounded-3xl overflow-hidden border-4 border-white shadow-xl relative bg-gray-100">
+        {generatedImage ? (
+          <img src={generatedImage} alt="IPL Friendship" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-[#8C8970]">
+            <Sparkles size={32} className="animate-pulse" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Generating Magic...</span>
+          </div>
+        )}
+        <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+          <div className="flex flex-col items-start">
+            <span className="text-[8px] font-bold uppercase tracking-widest text-white drop-shadow-md">{user1.iplTeam || 'RCB'}</span>
+            <span className="text-xs font-serif italic text-white drop-shadow-md">{user1.iplTeam === 'RCB' ? 'Virat' : 'Dhoni'}</span>
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="text-[8px] font-bold uppercase tracking-widest text-white drop-shadow-md">{user2.iplTeam || 'CSK'}</span>
+            <span className="text-xs font-serif italic text-white drop-shadow-md">{user2.iplTeam === 'CSK' ? 'Dhoni' : 'Virat'}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="z-10 flex items-center justify-center gap-4 w-full">
+        <div className="flex flex-col items-center gap-1">
+          <div className="w-12 h-12 bg-white rounded-xl shadow-md border border-[#FFD7D7] flex items-center justify-center overflow-hidden">
+            {user1.profilePic ? <img src={user1.profilePic} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <span className="text-lg font-serif italic">{user1.name[0]}</span>}
+          </div>
+          <span className="text-[10px] font-bold text-[#4A4A3A] truncate w-20">{user1.name}</span>
+          <span className="text-[8px] uppercase tracking-widest text-[#E86B6B] font-bold">{user1.iplTeam}</span>
+        </div>
+
+        <div className="flex flex-col items-center">
+          <Heart size={20} className="text-[#E86B6B]" fill="#E86B6B" />
+          <div className="h-8 w-[1px] bg-gradient-to-b from-transparent via-[#FFD7D7] to-transparent my-1" />
+        </div>
+
+        <div className="flex flex-col items-center gap-1">
+          <div className="w-12 h-12 bg-white rounded-xl shadow-md border border-[#FFD7D7] flex items-center justify-center overflow-hidden">
+            {user2.profilePic ? <img src={user2.profilePic} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <span className="text-lg font-serif italic">{user2.name[0]}</span>}
+          </div>
+          <span className="text-[10px] font-bold text-[#4A4A3A] truncate w-20">{user2.name}</span>
+          <span className="text-[8px] uppercase tracking-widest text-[#F9C80E] font-bold">{user2.iplTeam}</span>
+        </div>
+      </div>
+
+      <div className="z-10 w-full space-y-3">
+        <div className="p-3 bg-white/70 backdrop-blur-sm rounded-2xl border border-white shadow-sm">
+          <div className="text-[10px] font-bold text-[#4A4A3A] mb-1 uppercase tracking-widest">Official Connection</div>
+          <p className="text-[9px] leading-relaxed text-[#8C8970] italic">
+            You are the <span className="text-[#E86B6B] font-bold">#{rank.toLocaleString()}</span> person to download this exclusive IPL Friendship Card.
+          </p>
+        </div>
+        <div className="flex items-center justify-between px-2">
+          <div className="text-[8px] text-[#8C8970] font-bold uppercase tracking-widest">
+            amourcompass.com
+          </div>
+          <div className="text-[8px] text-[#8C8970] font-bold uppercase tracking-widest">
+            {new Date().toLocaleDateString()}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Connection Card Component
 const ConnectionCard = ({ 
@@ -265,6 +372,7 @@ function App() {
   const [heading, setHeading] = useState(0);
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isLocating, setIsLocating] = useState(true);
   const [isDesktop, setIsDesktop] = useState(false);
   
   // Friend State
@@ -289,14 +397,21 @@ function App() {
   const [relationshipType, setRelationshipType] = useState<'friend' | 'love'>('love');
   const [isFacingEachOther, setIsFacingEachOther] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showGlobe, setShowGlobe] = useState(false);
+  const [globeMatches, setGlobeMatches] = useState<any[]>([]);
+  const [globeRotation, setGlobeRotation] = useState<[number, number, number]>([0, -20, 0]);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [activeTab, setActiveTab] = useState<'compass' | 'messages' | 'friends' | 'saved'>('compass');
+  const [iplMode, setIplMode] = useState(false);
+  const [globalStats, setGlobalStats] = useState<any>(null);
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatError, setChatError] = useState<string | null>(null);
   const [isGeneratingCard, setIsGeneratingCard] = useState(false);
+  const [iplImage, setIplImage] = useState<string | null>(null);
+  const [isGeneratingIplImage, setIsGeneratingIplImage] = useState(false);
   const [cardToDownload, setCardToDownload] = useState<any>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [userChats, setUserChats] = useState<any[]>([]);
@@ -320,7 +435,8 @@ function App() {
     zodiac: 'Aries',
     targetCountry: 'United States',
     lookingForLove: true,
-    profilePic: ''
+    profilePic: '',
+    iplTeam: ''
   });
 
   const [onboardingStep, setOnboardingStep] = useState(1);
@@ -336,7 +452,8 @@ function App() {
         zodiac: userData.zodiac || 'Aries',
         targetCountry: userData.targetCountry || 'United States',
         lookingForLove: userData.lookingForLove || false,
-        profilePic: userData.profilePic || ''
+        profilePic: userData.profilePic || '',
+        iplTeam: userData.iplTeam || ''
       });
       setOnboardingStep(1);
       setShowOnboarding(true);
@@ -371,6 +488,26 @@ function App() {
       return () => clearTimeout(timer);
     }
   }, [userChats, user, selectedChatUser]);
+
+  // Listen to Global Stats
+  useEffect(() => {
+    if (!user) return;
+    
+    const unsub = onSnapshot(doc(db, 'stats', 'global'), (snap) => {
+      if (snap.exists()) {
+        setGlobalStats(snap.data());
+      } else {
+        // Initialize if doesn't exist
+        setDoc(doc(db, 'stats', 'global'), { iplCardDownloads: 0 }, { merge: true }).catch(err => {
+          console.error("Error initializing global stats:", err);
+        });
+      }
+    }, (error) => {
+      // Only log, don't throw to avoid breaking the whole app if stats fail
+      console.error("Global stats permission error:", error);
+    });
+    return () => unsub();
+  }, [user]);
 
   // Smooth rotation using a spring
   const springHeading = useSpring(0, {
@@ -510,6 +647,12 @@ function App() {
       const lastSeen = other.lastSeen?.toMillis ? other.lastSeen.toMillis() : 0;
       const isActive = lastSeen > Date.now() - 300000;
       if (!isActive) return false;
+
+      // IPL Mode Filter: If IPL mode is on, prioritize opposite team
+      if (iplMode && userData.iplTeam) {
+        const oppositeTeam = userData.iplTeam === 'RCB' ? 'CSK' : 'RCB';
+        if (other.iplTeam !== oppositeTeam) return false;
+      }
       
       // Only match people in the opposite direction (180 degrees offset)
       const oppDir = Math.abs(oppositeDegree - other.heading) < threshold || Math.abs(oppositeDegree - other.heading) > (360 - threshold);
@@ -550,6 +693,11 @@ function App() {
       if (loveMatch) {
         if (loveMatch.uid !== dismissedLoveMatchId) {
           setActiveLoveMatch(loveMatch);
+          // Automatically show globe for perfect matches if not already showing
+          if (!showGlobe) {
+            setGlobeMatches([loveMatch]);
+            setShowGlobe(true);
+          }
         }
       } else {
         setActiveLoveMatch(null);
@@ -635,16 +783,17 @@ function App() {
     );
 
     const unsub = onSnapshot(q, async (snap) => {
-      const chatsData = await Promise.all(snap.docs.map(async (d) => {
+      const chatsData = (await Promise.all(snap.docs.map(async (d) => {
         const data = d.data();
         const otherId = data.participants.find((id: string) => id !== user.uid);
+        if (!otherId) return null;
         const userSnap = await getDoc(doc(db, 'users', otherId));
         return { 
           id: d.id, 
           ...data, 
-          otherUser: userSnap.exists() ? { uid: otherId, ...userSnap.data() } : { uid: otherId, name: 'Unknown' }
+          otherUser: userSnap.exists() ? { uid: otherId, ...userSnap.data() } : null
         };
-      }));
+      }))).filter(c => c !== null && c.otherUser);
       
       // Sort client-side to avoid composite index requirement
       const sortedChats = chatsData.sort((a: any, b: any) => {
@@ -667,12 +816,34 @@ function App() {
     checkSupport();
 
     if (navigator.geolocation) {
+      // Fast initial fix
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          setIsLocating(false);
+        },
+        () => setIsLocating(false),
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+      );
+
       const watchId = navigator.geolocation.watchPosition(
-        (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => console.log("Location access denied"),
-        { enableHighAccuracy: true }
+        (pos) => {
+          setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          setIsLocating(false);
+        },
+        (err) => {
+          console.log("Location error:", err);
+          setIsLocating(false);
+        },
+        { 
+          enableHighAccuracy: true, 
+          timeout: 15000, 
+          maximumAge: 10000 
+        }
       );
       return () => navigator.geolocation.clearWatch(watchId);
+    } else {
+      setIsLocating(false);
     }
   }, []);
 
@@ -1083,6 +1254,68 @@ function App() {
     }
   };
 
+  const generateIPLImage = async () => {
+    if (iplImage) return;
+    // Use a high-quality template image instead of AI generation to save time and resources
+    setIplImage("https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=1000&auto=format&fit=crop");
+  };
+
+  const requestIPLCard = async () => {
+    if (!user || !selectedChatUser) return;
+    
+    const chatId = [user.uid, selectedChatUser.uid].sort().join('_');
+    const messageData = {
+      senderId: user.uid,
+      receiverId: selectedChatUser.uid,
+      timestamp: serverTimestamp(),
+      type: 'card_request_ipl',
+      cardType: 'ipl',
+      status: 'pending'
+    };
+
+    try {
+      await addDoc(collection(db, 'chats', chatId, 'messages'), messageData);
+      
+      await setDoc(doc(db, 'chats', chatId), {
+        participants: [user.uid, selectedChatUser.uid],
+        lastMessage: {
+          text: 'Requested an IPL Friendship Card',
+          senderId: user.uid,
+          timestamp: serverTimestamp()
+        },
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `chats/${chatId}/messages`);
+    }
+  };
+
+  const respondToIPLCardRequest = async (message: any, status: 'accepted' | 'declined') => {
+    if (!user || !selectedChatUser) return;
+    
+    const chatId = [user.uid, selectedChatUser.uid].sort().join('_');
+
+    try {
+      await updateDoc(doc(db, 'chats', chatId, 'messages', message.id), {
+        status
+      });
+
+      if (status === 'accepted') {
+        // Generate the card message
+        await addDoc(collection(db, 'chats', chatId, 'messages'), {
+          senderId: user.uid,
+          receiverId: selectedChatUser.uid,
+          timestamp: serverTimestamp(),
+          type: 'card_generated_ipl',
+          cardType: 'ipl',
+          downloaded: false
+        });
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `chats/${chatId}/messages/${message.id}`);
+    }
+  };
+
   const downloadCard = async (cardData: any) => {
     setCardToDownload(cardData);
     // Wait for render
@@ -1095,6 +1328,19 @@ function App() {
           link.download = `amour-compass-${cardData.type}-${Date.now()}.png`;
           link.href = dataUrl;
           link.click();
+          
+          // If it's an IPL card, increment global counter and mark as downloaded in message
+          if (cardData.type === 'ipl' && cardData.messageId) {
+            const chatId = [user.uid, selectedChatUser.uid].sort().join('_');
+            
+            await updateDoc(doc(db, 'stats', 'global'), {
+              iplCardDownloads: increment(1)
+            });
+            
+            await updateDoc(doc(db, 'chats', chatId, 'messages', cardData.messageId), {
+              downloaded: true
+            });
+          }
         } catch (err) {
           console.error('Could not generate card', err);
         } finally {
@@ -1102,7 +1348,7 @@ function App() {
           setCardToDownload(null);
         }
       }
-    }, 100);
+    }, 500);
   };
 
   const copyId = () => {
@@ -1472,6 +1718,28 @@ function App() {
                     </div>
                   </div>
                   
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">IPL Festival Team (Optional)</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button 
+                        type="button"
+                        onClick={() => setOnboardingData({...onboardingData, iplTeam: onboardingData.iplTeam === 'RCB' ? '' : 'RCB'})}
+                        className={`py-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${onboardingData.iplTeam === 'RCB' ? 'bg-[#E86B6B] border-[#E86B6B] text-white' : 'bg-[#FFF5F5]/30 border-[#FFD7D7] text-[#8C8970]'}`}
+                      >
+                        <span className="text-xs font-bold">RCB</span>
+                        <span className="text-[8px] uppercase tracking-widest">Royal Challengers</span>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setOnboardingData({...onboardingData, iplTeam: onboardingData.iplTeam === 'CSK' ? '' : 'CSK'})}
+                        className={`py-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${onboardingData.iplTeam === 'CSK' ? 'bg-[#F9C80E] border-[#F9C80E] text-white' : 'bg-[#FFF5F5]/30 border-[#FFD7D7] text-[#8C8970]'}`}
+                      >
+                        <span className="text-xs font-bold">CSK</span>
+                        <span className="text-[8px] uppercase tracking-widest">Super Kings</span>
+                      </button>
+                    </div>
+                  </div>
+                  
                   <div className="flex gap-3 pt-4">
                     <button 
                       type="button"
@@ -1644,10 +1912,39 @@ function App() {
                     >
                       View Profile
                     </button>
+                    <button 
+                      onClick={() => {
+                        setGlobeMatches([activeLoveMatch]);
+                        setShowGlobe(true);
+                        setDismissedLoveMatchId(activeLoveMatch.uid);
+                        setActiveLoveMatch(null);
+                      }}
+                      className="w-full py-3 bg-white text-[#E86B6B] border-2 border-[#E86B6B] rounded-2xl font-bold uppercase tracking-widest text-[10px] hover:bg-[#FFF5F5] transition-all flex items-center justify-center gap-2"
+                    >
+                      <Globe size={14} /> See on Globe
+                    </button>
                     <div className="text-[9px] font-sans font-bold uppercase tracking-[0.2em] text-[#D4A373]">Destiny is calling...</div>
                   </div>
                 </motion.div>
               </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showGlobe && (
+              <SoulmateGlobe 
+                userUid={user?.uid || ''}
+                userLocation={location}
+                matches={globeMatches}
+                allMatches={userChats.map(c => c.otherUser)}
+                rotation={globeRotation}
+                onRotationChange={setGlobeRotation}
+                onMatchSelect={(match) => {
+                  setSelectedChatUser(match);
+                  setGlobeMatches([match]);
+                }}
+                onClose={() => setShowGlobe(false)}
+              />
             )}
           </AnimatePresence>
 
@@ -1713,7 +2010,60 @@ function App() {
             </header>
 
             {activeTab === 'compass' ? (
-              <>
+              <div className="relative w-full flex flex-col items-center gap-8">
+                {/* IPL Festival Toggle */}
+                <motion.button
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  onClick={() => {
+                    if (!userData?.iplTeam) {
+                      openEditProfile();
+                      setOnboardingStep(2);
+                    } else {
+                      setIplMode(!iplMode);
+                    }
+                  }}
+                  className={`w-full max-w-[280px] p-4 rounded-3xl border-2 transition-all flex items-center justify-between gap-3 shadow-lg ${iplMode ? 'bg-gradient-to-r from-[#E86B6B] to-[#F9C80E] border-white text-white' : 'bg-white border-[#FFD7D7] text-[#8C8970]'}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${iplMode ? 'bg-white/20' : 'bg-[#FFF5F5]'}`}>
+                      <Sparkles size={20} className={iplMode ? 'text-white' : 'text-[#E86B6B]'} />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-[10px] font-bold uppercase tracking-widest leading-none mb-1">IPL Festival</div>
+                      <div className="text-xs font-serif italic">
+                        {!userData?.iplTeam 
+                          ? 'Select your team to join' 
+                          : iplMode ? `Finding ${userData.iplTeam === 'RCB' ? 'CSK' : 'RCB'} Fans` : 'Join the IPL Feast'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className={`w-12 h-6 rounded-full relative transition-all ${iplMode ? 'bg-white/30' : 'bg-[#8C8970]/20'}`}>
+                    <motion.div 
+                      animate={{ x: iplMode ? 24 : 4 }}
+                      className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm" 
+                    />
+                  </div>
+                </motion.button>
+
+                <div className="relative">
+                {isLocating && !location && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 z-20 bg-white/60 backdrop-blur-sm rounded-full flex flex-col items-center justify-center gap-2"
+                  >
+                    <motion.div 
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      className="text-[#E86B6B]"
+                    >
+                      <MapPin size={24} />
+                    </motion.div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#E86B6B]">Locating...</span>
+                  </motion.div>
+                )}
+                
                 {/* Compass Container */}
                 <div className="relative w-72 h-72 md:w-80 md:h-80 flex flex-col items-center justify-center" onMouseMove={handleMouseMove}>
                   {/* Outer Static Ring */}
@@ -1903,12 +2253,27 @@ function App() {
                     )}
                   </AnimatePresence>
                 </div>
-              </>
+              </div>
+            </div>
             ) : activeTab === 'messages' ? (
               <div className="w-full space-y-8">
                 <div className="space-y-4">
-                  <h3 className="text-xs font-sans font-bold uppercase tracking-widest text-[#E86B6B] px-2 flex items-center gap-2">
-                    <MessageCircle size={14} fill="currentColor" /> Recent Chats
+                  <h3 className="text-xs font-sans font-bold uppercase tracking-widest text-[#E86B6B] px-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MessageCircle size={14} fill="currentColor" /> Recent Chats
+                    </div>
+                    <button 
+                      onClick={() => {
+                        const allFriends = userChats.map(c => c.otherUser);
+                        setGlobeMatches(allFriends);
+                        setShowGlobe(true);
+                      }}
+                      className="p-2 bg-white rounded-xl border border-[#FFD7D7] text-[#8C8970] hover:text-[#E86B6B] hover:border-[#E86B6B] transition-all flex items-center gap-2"
+                      title="See all friends on globe"
+                    >
+                      <Globe size={14} />
+                      <span className="text-[10px]">Global View</span>
+                    </button>
                   </h3>
                   <div className="space-y-3">
                     {userChats.length > 0 ? (
@@ -2319,6 +2684,16 @@ function App() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button 
+                      onClick={() => {
+                        setGlobeMatches([selectedChatUser]);
+                        setShowGlobe(true);
+                      }}
+                      className="p-2 rounded-xl border border-[#FFD7D7] bg-white text-[#8C8970] hover:text-[#E86B6B] hover:border-[#E86B6B] transition-all"
+                      title="See on globe"
+                    >
+                      <Globe size={18} />
+                    </button>
+                    <button 
                       onClick={() => toggleSaved(selectedChatUser.uid, 'friends')}
                       className={`p-2 rounded-xl border transition-all ${userData?.friends?.includes(selectedChatUser.uid) ? 'bg-[#D4A373] border-[#D4A373] text-white' : 'bg-white border-[#FFD7D7] text-[#8C8970]'}`}
                       title={userData?.friends?.includes(selectedChatUser.uid) ? "Remove Friend" : "Add Friend"}
@@ -2382,7 +2757,100 @@ function App() {
                               ? 'bg-[#E86B6B] text-white rounded-tr-none' 
                               : 'bg-white border border-[#FFD7D7] text-[#4A4A3A] rounded-tl-none'
                           }`}>
-                            {msg.type === 'card_request' ? (
+                            {msg.type === 'card_request_ipl' ? (
+                              <div className="space-y-3 min-w-[200px]">
+                                <div className={`flex items-center gap-2 mb-2 ${msg.senderId === user.uid ? 'text-white/80' : 'text-[#8C8970]'}`}>
+                                  <Sparkles size={14} className={msg.senderId === user.uid ? 'text-white' : 'text-[#E86B6B]'} />
+                                  <span className="text-[10px] font-bold uppercase tracking-widest">
+                                    {msg.senderId === user.uid ? `You requested an IPL card` : `${selectedChatUser.name} requested an IPL card`}
+                                  </span>
+                                </div>
+                                
+                                {msg.status === 'pending' && msg.senderId !== user.uid && (
+                                  <div className="flex gap-2">
+                                    <button 
+                                      onClick={() => respondToIPLCardRequest(msg, 'accepted')}
+                                      className="flex-1 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-1 shadow-sm hover:bg-emerald-600 transition-colors"
+                                    >
+                                      <Check size={12} /> Accept
+                                    </button>
+                                    <button 
+                                      onClick={() => respondToIPLCardRequest(msg, 'declined')}
+                                      className="flex-1 py-2 bg-[#8C8970]/10 text-[#8C8970] rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-1 hover:bg-[#8C8970]/20 transition-colors"
+                                    >
+                                      <X size={12} /> Decline
+                                    </button>
+                                  </div>
+                                )}
+                                
+                                {msg.status !== 'pending' && (
+                                  <div className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 ${msg.status === 'accepted' ? (msg.senderId === user.uid ? 'text-white' : 'text-emerald-500') : (msg.senderId === user.uid ? 'text-white/60' : 'text-[#E86B6B]')}`}>
+                                    {msg.status === 'accepted' ? <Check size={12} /> : <XCircle size={12} />}
+                                    {msg.status === 'accepted' ? 'Request Accepted' : 'Request Declined'}
+                                  </div>
+                                )}
+                              </div>
+                            ) : msg.type === 'card_generated_ipl' ? (
+                              <div className="space-y-4 min-w-[240px]">
+                                <div className="relative group overflow-hidden rounded-2xl border border-white/20">
+                                  <div className="scale-[0.5] origin-top -mb-[240px] -mx-[80px]">
+                                    <IPLFriendCard 
+                                      user1={msg.senderId === user.uid ? userData : selectedChatUser} 
+                                      user2={msg.senderId === user.uid ? selectedChatUser : userData}
+                                      rank={(globalStats?.iplCardDownloads || 0) + 1}
+                                      generatedImage={iplImage}
+                                      cardRef={null as any}
+                                    />
+                                  </div>
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                    <button 
+                                      onClick={() => {
+                                        generateIPLImage();
+                                        downloadCard({
+                                          type: 'ipl',
+                                          user1: msg.senderId === user.uid ? userData : selectedChatUser,
+                                          user2: msg.senderId === user.uid ? selectedChatUser : userData,
+                                          rank: (globalStats?.iplCardDownloads || 0) + 1,
+                                          messageId: msg.id
+                                        });
+                                      }}
+                                      className="p-3 bg-white text-[#4A4A3A] rounded-full shadow-xl hover:scale-110 transition-all"
+                                    >
+                                      <Download size={24} />
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-center gap-2 pt-2">
+                                  <p className={`text-[10px] font-bold uppercase tracking-widest ${msg.senderId === user.uid ? 'text-white/80' : 'text-[#8C8970]'}`}>Exclusive IPL Card Ready!</p>
+                                  {msg.downloaded ? (
+                                    <div className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 ${msg.senderId === user.uid ? 'text-white' : 'text-emerald-500'}`}>
+                                      <Check size={12} /> Downloaded
+                                    </div>
+                                  ) : (
+                                    <button 
+                                      onClick={() => {
+                                        generateIPLImage();
+                                        downloadCard({
+                                          type: 'ipl',
+                                          user1: msg.senderId === user.uid ? userData : selectedChatUser,
+                                          user2: msg.senderId === user.uid ? selectedChatUser : userData,
+                                          rank: (globalStats?.iplCardDownloads || 0) + 1,
+                                          messageId: msg.id
+                                        });
+                                      }}
+                                      disabled={isGeneratingCard}
+                                      className={`w-full py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-sm ${
+                                        msg.senderId === user.uid 
+                                          ? 'bg-white text-[#E86B6B] hover:bg-[#FFF5F5]' 
+                                          : 'bg-[#4A4A3A] text-white hover:bg-[#E86B6B]'
+                                      }`}
+                                    >
+                                      {isGeneratingCard ? 'Generating...' : <><Download size={14} /> Download & Share</>}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ) : msg.type === 'card_request' ? (
                               <div className="space-y-3 min-w-[200px]">
                                 <div className={`flex items-center gap-2 mb-2 ${msg.senderId === user.uid ? 'text-white/80' : 'text-[#8C8970]'}`}>
                                   {msg.cardType === 'soulmate' ? <Heart size={14} fill={msg.senderId === user.uid ? 'white' : '#E86B6B'} className={msg.senderId === user.uid ? 'text-white' : 'text-[#E86B6B]'} /> : <Sparkles size={14} className={msg.senderId === user.uid ? 'text-white' : 'text-[#D4A373]'} />}
@@ -2475,7 +2943,15 @@ function App() {
                   {/* Chat Input */}
                   <div className="pb-10 pt-6 px-6 border-t border-[#FFD7D7] space-y-4 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
                     {/* Card Selection Menu */}
-                    <div className="flex justify-center gap-3">
+                    <div className="flex justify-center gap-2 flex-wrap">
+                      {userData?.iplTeam && selectedChatUser?.iplTeam && userData.iplTeam !== selectedChatUser.iplTeam && (
+                        <button 
+                          onClick={requestIPLCard}
+                          className="px-4 py-2 bg-gradient-to-r from-[#E86B6B] to-[#F9C80E] text-white rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-all shadow-sm"
+                        >
+                          <Sparkles size={12} /> IPL Card
+                        </button>
+                      )}
                       <button 
                         onClick={() => sendCardRequest('soulmate')}
                         className="px-4 py-2 bg-[#FFF5F5] border border-[#E86B6B] text-[#E86B6B] rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#E86B6B] hover:text-white transition-all shadow-sm"
@@ -2545,12 +3021,22 @@ function App() {
           {/* Hidden Card for Download */}
           <div className="fixed -left-[9999px] top-0 pointer-events-none">
             {cardToDownload && (
-              <ConnectionCard 
-                type={cardToDownload.type}
-                user1={cardToDownload.user1}
-                user2={cardToDownload.user2}
-                cardRef={cardRef}
-              />
+              cardToDownload.type === 'ipl' ? (
+                <IPLFriendCard 
+                  user1={cardToDownload.user1}
+                  user2={cardToDownload.user2}
+                  rank={cardToDownload.rank}
+                  generatedImage={iplImage}
+                  cardRef={cardRef}
+                />
+              ) : (
+                <ConnectionCard 
+                  type={cardToDownload.type}
+                  user1={cardToDownload.user1}
+                  user2={cardToDownload.user2}
+                  cardRef={cardRef}
+                />
+              )
             )}
           </div>
         </motion.div>

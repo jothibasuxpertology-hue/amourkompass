@@ -1,6 +1,6 @@
 {
-  "name": "Amour Compass",
-  "description": "A real-time collaborative compass that points you toward your friends and soulmates. Features unique usernames, live location syncing, and beautiful animations.",
+  "name": "Amour Compass - IPL Festival",
+  "description": "Find your IPL soulmate! Connect with RCB and CSK fans, rotate the compass to find your match, and generate exclusive friendship cards featuring Virat and Dhoni.",
   "requestFramePermissions": [
     "geolocation"
   ]
