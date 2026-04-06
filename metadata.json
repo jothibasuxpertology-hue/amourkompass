@@ -1,6 +1,6 @@
 {
-  "name": "Amour Compass - IPL Festival",
-  "description": "Find your IPL soulmate! Connect with RCB and CSK fans, rotate the compass to find your match, and generate exclusive friendship cards featuring Virat and Dhoni.",
+  "name": "RCB x CSK Friendship Hub",
+  "description": "Celebrate the legendary friendship between RCB and CSK. Explore iconic moments, shared legends like Virat and Dhoni, and connect with fans from both sides of the rivalry.",
   "requestFramePermissions": [
     "geolocation"
   ]
