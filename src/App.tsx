@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, Component } from 'react';
 import { motion, AnimatePresence, useSpring } from 'motion/react';
-import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft, Download, Share2, Check, XCircle, ShieldCheck, Instagram, Mail, Globe } from 'lucide-react';
+import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft, Download, Share2, Check, XCircle, ShieldCheck, Instagram, Mail, Globe, ChevronDown } from 'lucide-react';
 import { toBlob } from 'html-to-image';
 import { auth, db } from './firebase';
 import SoulmateGlobe from './components/SoulmateGlobe';
@@ -406,6 +406,7 @@ function App() {
   const [chatInput, setChatInput] = useState('');
   const [chatError, setChatError] = useState<string | null>(null);
   const [isGeneratingCard, setIsGeneratingCard] = useState(false);
+  const [showCardOptions, setShowCardOptions] = useState(false);
   const [iplImage, setIplImage] = useState<string | null>("https://images.weserv.nl/?url=im.rediff.com/cricket/2025/mar/24dhoni-kohli.jpg?w=670&h=900");
   const [isGeneratingIplImage, setIsGeneratingIplImage] = useState(false);
   const [cardToDownload, setCardToDownload] = useState<any>(null);
@@ -663,8 +664,25 @@ function App() {
     setSoulmateMatches(limitedMatches);
 
     // Check for "Soulmate Found" (Active Love Match Popup)
-    // Rule: Zodiac match AND age difference <= 10 years
-    if (userData.lookingForLove) {
+    // If IPL mode is on, search only for IPL partner (opposite team)
+    if (iplMode && userData.iplTeam) {
+      const oppositeTeam = userData.iplTeam === 'RCB' ? 'CSK' : 'RCB';
+      const iplMatches = shuffled.filter(m => m.iplTeam === oppositeTeam);
+      const iplMatch = iplMatches.length > 0 ? iplMatches[0] : null;
+
+      if (iplMatch) {
+        if (iplMatch.uid !== dismissedLoveMatchId) {
+          setActiveLoveMatch(iplMatch);
+          if (!showGlobe) {
+            setGlobeMatches([iplMatch]);
+            setShowGlobe(true);
+          }
+        }
+      } else {
+        setActiveLoveMatch(null);
+        setDismissedLoveMatchId(null);
+      }
+    } else if (userData.lookingForLove) {
       const loveMatches = shuffled.filter(m => {
         if (!m.lookingForLove) return false;
         
@@ -1900,8 +1918,18 @@ function App() {
                       )}
                     </div>
                     <div className="space-y-1">
-                      <h2 className="text-2xl font-serif text-[#E86B6B]">Soulmate Found!</h2>
-                      <p className="text-[#8C8970] text-sm">You are aligned with <span className="font-bold text-[#4A4A3A]">{activeLoveMatch.name}</span></p>
+                      <h2 className="text-2xl font-serif text-[#E86B6B]">
+                        {iplMode ? 'Elite IPL Soulpartner Found!' : 'Soulmate Found!'}
+                      </h2>
+                      <p className="text-[#8C8970] text-sm">
+                        {iplMode ? (
+                          <>
+                            IPL <span className="font-bold text-[#4A4A3A]">{activeLoveMatch.iplTeam}</span> Friend Found!
+                          </>
+                        ) : (
+                          <>You are aligned with <span className="font-bold text-[#4A4A3A]">{activeLoveMatch.name}</span></>
+                        )}
+                      </p>
                       <div className="flex items-center justify-center gap-2 text-[10px] text-[#8C8970] font-sans font-bold uppercase tracking-widest pt-1">
                         <span>{activeLoveMatch.age} Years</span>
                         <span className="w-1 h-1 bg-[#FFD7D7] rounded-full" />
@@ -2951,29 +2979,51 @@ function App() {
 
                   {/* Chat Input */}
                   <div className="pb-10 pt-6 px-6 border-t border-[#FFD7D7] space-y-4 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
-                    {/* Card Selection Menu */}
-                    <div className="flex justify-center gap-2 flex-wrap">
-                      {userData?.iplTeam && selectedChatUser?.iplTeam && userData.iplTeam !== selectedChatUser.iplTeam && (
-                        <button 
-                          onClick={requestIPLCard}
-                          className="px-4 py-2 bg-gradient-to-r from-[#E86B6B] to-[#F9C80E] text-white rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-all shadow-sm"
-                        >
-                          <Sparkles size={12} /> IPL Card
-                        </button>
-                      )}
+                    {/* Card Options Toggle */}
+                    <div className="flex justify-center">
                       <button 
-                        onClick={() => sendCardRequest('soulmate')}
-                        className="px-4 py-2 bg-[#FFF5F5] border border-[#E86B6B] text-[#E86B6B] rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#E86B6B] hover:text-white transition-all shadow-sm"
+                        onClick={() => setShowCardOptions(!showCardOptions)}
+                        className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#FFF5F5] border border-[#FFD7D7] text-[#8C8970] text-[9px] font-bold uppercase tracking-widest hover:bg-[#E86B6B] hover:text-white transition-all shadow-sm"
                       >
-                        <Heart size={12} fill="currentColor" /> Soulmate Card
-                      </button>
-                      <button 
-                        onClick={() => sendCardRequest('friendship')}
-                        className="px-4 py-2 bg-[#FDFCF8] border border-[#D4A373] text-[#D4A373] rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#D4A373] hover:text-white transition-all shadow-sm"
-                      >
-                        <Sparkles size={12} /> Friendship Card
+                        <ChevronDown size={12} className={`transition-transform duration-300 ${showCardOptions ? 'rotate-180' : ''}`} />
+                        {showCardOptions ? 'Hide Card Options' : 'Show Card Options'}
                       </button>
                     </div>
+
+                    {/* Card Selection Menu */}
+                    <AnimatePresence>
+                      {showCardOptions && (
+                        <motion.div 
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="flex justify-center gap-2 flex-wrap pb-2">
+                            {userData?.iplTeam && selectedChatUser?.iplTeam && userData.iplTeam !== selectedChatUser.iplTeam && (
+                              <button 
+                                onClick={requestIPLCard}
+                                className="px-4 py-2 bg-gradient-to-r from-[#E86B6B] to-[#F9C80E] text-white rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-all shadow-sm"
+                              >
+                                <Sparkles size={12} /> IPL Card
+                              </button>
+                            )}
+                            <button 
+                              onClick={() => sendCardRequest('soulmate')}
+                              className="px-4 py-2 bg-[#FFF5F5] border border-[#E86B6B] text-[#E86B6B] rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#E86B6B] hover:text-white transition-all shadow-sm"
+                            >
+                              <Heart size={12} fill="currentColor" /> Soulmate Card
+                            </button>
+                            <button 
+                              onClick={() => sendCardRequest('friendship')}
+                              className="px-4 py-2 bg-[#FDFCF8] border border-[#D4A373] text-[#D4A373] rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#D4A373] hover:text-white transition-all shadow-sm"
+                            >
+                              <Sparkles size={12} /> Friendship Card
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     <div className="flex justify-center gap-6">
                       <button 
