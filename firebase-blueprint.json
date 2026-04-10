@@ -15,7 +15,6 @@
         "zodiac": { "type": "string" },
         "targetCountry": { "type": "string" },
         "heading": { "type": "number" },
-        "iplTeam": { "type": "string", "enum": ["RCB", "CSK"], "description": "The user's chosen IPL team for the festival." },
         "location": {
           "type": "object",
           "properties": {
@@ -46,7 +45,6 @@
       "description": "Global counters and statistics for the app.",
       "type": "object",
       "properties": {
-        "iplCardDownloads": { "type": "number", "description": "Total number of IPL friend cards downloaded." }
       }
     },
     "UsernameMapping": {

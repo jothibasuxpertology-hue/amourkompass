@@ -76,11 +76,11 @@ service cloud.firestore {
       return hasRequiredFields(['senderId', 'receiverId', 'timestamp', 'type']) &&
              data.senderId is string && data.receiverId is string &&
              data.timestamp is timestamp &&
-             data.type in ['text', 'emoji', 'card_request', 'card_generated', 'card_request_ipl', 'card_generated_ipl'] &&
+             data.type in ['text', 'emoji', 'card_request', 'card_generated'] &&
              (data.type == 'text' ? (data.text is string && data.text.trim().size() > 0 && data.text.size() <= 1000) : true) &&
              (data.type == 'emoji' ? (data.emoji is string && data.emoji.size() > 0 && data.emoji.size() <= 10) : true) &&
-             (data.type in ['card_request', 'card_request_ipl'] ? (data.get('cardType', 'friendship') in ['soulmate', 'friendship', 'ipl'] && data.get('status', 'pending') in ['pending', 'accepted', 'declined']) : true) &&
-             (data.type in ['card_generated', 'card_generated_ipl'] ? (data.get('cardType', 'friendship') in ['soulmate', 'friendship', 'ipl'] && (data.get('downloaded', false) is bool)) : true);
+             (data.type == 'card_request' ? (data.get('cardType', 'friendship') in ['soulmate', 'friendship'] && data.get('status', 'pending') in ['pending', 'accepted', 'declined']) : true) &&
+             (data.type == 'card_generated' ? (data.get('cardType', 'friendship') in ['soulmate', 'friendship'] && (data.get('downloaded', false) is bool)) : true);
     }
 
     function isCorrectChatId(chatId, uid1, uid2) {
@@ -105,8 +105,7 @@ service cloud.firestore {
              (data.get('lookingForLove', null) == null || data.lookingForLove is bool) &&
              (data.get('friends', null) == null || data.friends is list) &&
              (data.get('loves', null) == null || data.loves is list) &&
-             (data.get('profilePic', null) == null || data.profilePic == '' || isValidUrl(data.profilePic)) &&
-             (data.get('iplTeam', null) == null || data.iplTeam == '' || data.iplTeam in ['RCB', 'CSK']);
+             (data.get('profilePic', null) == null || data.profilePic == '' || isValidUrl(data.profilePic));
     }
 
     match /users/{userId} {
@@ -125,12 +124,8 @@ service cloud.firestore {
 
     match /stats/global {
       allow read: if isAuthenticated();
-      // Allow atomic increment of iplCardDownloads
-      allow update: if isAuthenticated() && 
-                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['iplCardDownloads']) &&
-                      request.resource.data.iplCardDownloads == resource.data.iplCardDownloads + 1;
       // Allow initial creation by any authenticated user if it doesn't exist (simplified for this app)
-      allow create: if isAuthenticated() && hasOnlyAllowedFields(['iplCardDownloads']) && request.resource.data.iplCardDownloads == 0;
+      allow create: if isAuthenticated() && hasOnlyAllowedFields([]) && request.resource.data.keys().size() == 0;
     }
 
     match /usernames/{username} {
@@ -190,11 +185,11 @@ service cloud.firestore {
       // Allow update for card_request status or card download status
       allow update: if isAuthenticated() &&
                       (
-                        ((resource.data.type == 'card_request' || resource.data.type == 'card_request_ipl') &&
+                        ((resource.data.type == 'card_request') &&
                          resource.data.receiverId == request.auth.uid &&
                          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
                          request.resource.data.status in ['accepted', 'declined']) ||
-                        ((resource.data.type == 'card_generated' || resource.data.type == 'card_generated_ipl') &&
+                        ((resource.data.type == 'card_generated') &&
                          (resource.data.senderId == request.auth.uid || resource.data.receiverId == request.auth.uid) &&
                          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['downloaded']) &&
                          request.resource.data.downloaded == true &&
