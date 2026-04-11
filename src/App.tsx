@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo, Component } from 'react';
 import { motion, AnimatePresence, useSpring } from 'motion/react';
-import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft, Download, Share2, Check, XCircle, ShieldCheck, Instagram, Mail, Globe, ChevronDown } from 'lucide-react';
-import { toBlob } from 'html-to-image';
+import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft, Download, Share2, Check, XCircle, ShieldCheck, Instagram, Mail, Globe } from 'lucide-react';
+import { toPng } from 'html-to-image';
 import { auth, db } from './firebase';
 import SoulmateGlobe from './components/SoulmateGlobe';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, setDoc, getDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, updateDoc, addDoc, orderBy, limit, increment } from 'firebase/firestore';
+import { doc, setDoc, getDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, updateDoc, addDoc, orderBy, limit } from 'firebase/firestore';
 
 // Firestore Error Handling
 enum OperationType {
@@ -297,13 +297,11 @@ function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [activeTab, setActiveTab] = useState<'compass' | 'messages' | 'friends' | 'saved'>('compass');
-  const [globalStats, setGlobalStats] = useState<any>(null);
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatError, setChatError] = useState<string | null>(null);
   const [isGeneratingCard, setIsGeneratingCard] = useState(false);
-  const [showCardOptions, setShowCardOptions] = useState(false);
   const [cardToDownload, setCardToDownload] = useState<any>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [userChats, setUserChats] = useState<any[]>([]);
@@ -378,26 +376,6 @@ function App() {
       return () => clearTimeout(timer);
     }
   }, [userChats, user, selectedChatUser]);
-
-  // Listen to Global Stats
-  useEffect(() => {
-    if (!user) return;
-    
-    const unsub = onSnapshot(doc(db, 'stats', 'global'), (snap) => {
-      if (snap.exists()) {
-        setGlobalStats(snap.data());
-      } else {
-        // Initialize if doesn't exist
-        setDoc(doc(db, 'stats', 'global'), {}, { merge: true }).catch(err => {
-          console.error("Error initializing global stats:", err);
-        });
-      }
-    }, (error) => {
-      // Only log, don't throw to avoid breaking the whole app if stats fail
-      console.error("Global stats permission error:", error);
-    });
-    return () => unsub();
-  }, [user]);
 
   // Smooth rotation using a spring
   const springHeading = useSpring(0, {
@@ -551,6 +529,7 @@ function App() {
     setSoulmateMatches(limitedMatches);
 
     // Check for "Soulmate Found" (Active Love Match Popup)
+    // Rule: Zodiac match AND age difference <= 10 years
     if (userData.lookingForLove) {
       const loveMatches = shuffled.filter(m => {
         if (!m.lookingForLove) return false;
@@ -1144,24 +1123,11 @@ function App() {
       if (cardRef.current) {
         setIsGeneratingCard(true);
         try {
-          // Add more robust options for toBlob
-          const blob = await toBlob(cardRef.current, { 
-            cacheBust: true, 
-            pixelRatio: 2, // Reduced pixel ratio for better compatibility
-            skipAutoScale: true,
-            includeQueryParams: true,
-          });
-          
-          if (!blob) throw new Error('Blob generation failed');
-          
-          const url = URL.createObjectURL(blob);
+          const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
           const link = document.createElement('a');
           link.download = `amour-compass-${cardData.type}-${Date.now()}.png`;
-          link.href = url;
+          link.href = dataUrl;
           link.click();
-          
-          // Clean up the URL
-          setTimeout(() => URL.revokeObjectURL(url), 100);
         } catch (err) {
           console.error('Could not generate card', err);
         } finally {
@@ -1169,7 +1135,7 @@ function App() {
           setCardToDownload(null);
         }
       }
-    }, 1000);
+    }, 100);
   };
 
   const copyId = () => {
@@ -1690,12 +1656,8 @@ function App() {
                       )}
                     </div>
                     <div className="space-y-1">
-                      <h2 className="text-2xl font-serif text-[#E86B6B]">
-                        Soulmate Found!
-                      </h2>
-                      <p className="text-[#8C8970] text-sm">
-                        You are aligned with <span className="font-bold text-[#4A4A3A]">{activeLoveMatch.name}</span>
-                      </p>
+                      <h2 className="text-2xl font-serif text-[#E86B6B]">Soulmate Found!</h2>
+                      <p className="text-[#8C8970] text-sm">You are aligned with <span className="font-bold text-[#4A4A3A]">{activeLoveMatch.name}</span></p>
                       <div className="flex items-center justify-center gap-2 text-[10px] text-[#8C8970] font-sans font-bold uppercase tracking-widest pt-1">
                         <span>{activeLoveMatch.age} Years</span>
                         <span className="w-1 h-1 bg-[#FFD7D7] rounded-full" />
@@ -1813,8 +1775,7 @@ function App() {
             </header>
 
             {activeTab === 'compass' ? (
-              <div className="relative w-full flex flex-col items-center gap-8">
-                <div className="relative">
+              <div className="relative">
                 {isLocating && !location && (
                   <motion.div 
                     initial={{ opacity: 0 }}
@@ -2022,7 +1983,6 @@ function App() {
                   </AnimatePresence>
                 </div>
               </div>
-            </div>
             ) : activeTab === 'messages' ? (
               <div className="w-full space-y-8">
                 <div className="space-y-4">
@@ -2617,43 +2577,21 @@ function App() {
 
                   {/* Chat Input */}
                   <div className="pb-10 pt-6 px-6 border-t border-[#FFD7D7] space-y-4 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
-                    {/* Card Options Toggle */}
-                    <div className="flex justify-center">
+                    {/* Card Selection Menu */}
+                    <div className="flex justify-center gap-3">
                       <button 
-                        onClick={() => setShowCardOptions(!showCardOptions)}
-                        className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#FFF5F5] border border-[#FFD7D7] text-[#8C8970] text-[9px] font-bold uppercase tracking-widest hover:bg-[#E86B6B] hover:text-white transition-all shadow-sm"
+                        onClick={() => sendCardRequest('soulmate')}
+                        className="px-4 py-2 bg-[#FFF5F5] border border-[#E86B6B] text-[#E86B6B] rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#E86B6B] hover:text-white transition-all shadow-sm"
                       >
-                        <ChevronDown size={12} className={`transition-transform duration-300 ${showCardOptions ? 'rotate-180' : ''}`} />
-                        {showCardOptions ? 'Hide Card Options' : 'Show Card Options'}
+                        <Heart size={12} fill="currentColor" /> Soulmate Card
+                      </button>
+                      <button 
+                        onClick={() => sendCardRequest('friendship')}
+                        className="px-4 py-2 bg-[#FDFCF8] border border-[#D4A373] text-[#D4A373] rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#D4A373] hover:text-white transition-all shadow-sm"
+                      >
+                        <Sparkles size={12} /> Friendship Card
                       </button>
                     </div>
-
-                    {/* Card Selection Menu */}
-                    <AnimatePresence>
-                      {showCardOptions && (
-                        <motion.div 
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="flex justify-center gap-2 flex-wrap pb-2">
-                            <button 
-                              onClick={() => sendCardRequest('soulmate')}
-                              className="px-4 py-2 bg-[#FFF5F5] border border-[#E86B6B] text-[#E86B6B] rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#E86B6B] hover:text-white transition-all shadow-sm"
-                            >
-                              <Heart size={12} fill="currentColor" /> Soulmate Card
-                            </button>
-                            <button 
-                              onClick={() => sendCardRequest('friendship')}
-                              className="px-4 py-2 bg-[#FDFCF8] border border-[#D4A373] text-[#D4A373] rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#D4A373] hover:text-white transition-all shadow-sm"
-                            >
-                              <Sparkles size={12} /> Friendship Card
-                            </button>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
 
                     <div className="flex justify-center gap-6">
                       <button 

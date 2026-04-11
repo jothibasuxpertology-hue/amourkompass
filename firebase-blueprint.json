@@ -40,13 +40,6 @@
       },
       "required": ["uid", "name", "country", "gender", "age", "zodiac", "targetCountry", "lastSeen"]
     },
-    "GlobalStats": {
-      "title": "Global Stats",
-      "description": "Global counters and statistics for the app.",
-      "type": "object",
-      "properties": {
-      }
-    },
     "UsernameMapping": {
       "title": "Username Mapping",
       "description": "Mapping of usernames to UIDs for uniqueness and lookup.",
@@ -94,10 +87,6 @@
     "/usernames/{username}": {
       "schema": "UsernameMapping",
       "description": "Mapping of usernames to UIDs for uniqueness and lookup."
-    },
-    "/stats/global": {
-      "schema": "GlobalStats",
-      "description": "Global statistics and counters."
     },
     "/chats/{chatId}": {
       "schema": "Chat",

@@ -1,6 +1,6 @@
 {
-  "name": "RCB x CSK Friendship Hub",
-  "description": "Celebrate the legendary friendship between RCB and CSK. Explore iconic moments, shared legends like Virat and Dhoni, and connect with fans from both sides of the rivalry.",
+  "name": "Amour Compass",
+  "description": "A real-time collaborative compass that points you toward your friends and soulmates. Features unique usernames, live location syncing, and beautiful animations.",
   "requestFramePermissions": [
     "geolocation"
   ]
