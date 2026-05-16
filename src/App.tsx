@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo, Component } from 'react';
 import { motion, AnimatePresence, useSpring } from 'motion/react';
-import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft, Download, Share2, Check, XCircle, ShieldCheck, Instagram, Mail, Globe } from 'lucide-react';
+import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft, Download, Share2, Check, XCircle, ShieldCheck, Instagram, Mail, Globe, Plus } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { auth, db } from './firebase';
 import SoulmateGlobe from './components/SoulmateGlobe';
-import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User as FirebaseUser, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc, getDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, updateDoc, addDoc, orderBy, limit } from 'firebase/firestore';
 
 // Firestore Error Handling
@@ -259,6 +259,7 @@ const ZODIAC_COMPATIBILITY: { [key: string]: string[] } = {
 };
 
 import { PROFILE_PICS } from './profilePics';
+import { generateMatchInsight, MatchInsight } from './services/aiService';
 
 function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -312,6 +313,15 @@ function App() {
   const [notification, setNotification] = useState<{ name: string; text: string; uid: string } | null>(null);
   const [sensorStatus, setSensorStatus] = useState<'inactive' | 'active' | 'stuck' | 'relative'>('inactive');
   const [hasAcceptedSafetyWarning, setHasAcceptedSafetyWarning] = useState(false);
+  const [matchInsight, setMatchInsight] = useState<MatchInsight | null>(null);
+  const [isGeneratingInsight, setIsGeneratingInsight] = useState(false);
+  const [showChatActions, setShowChatActions] = useState(false);
+  const [showMatchInsight, setShowMatchInsight] = useState(true);
+  const [authMethod, setAuthMethod] = useState<'welcome' | 'email' | 'signup'>('welcome');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const isFullyAuthed = user && (user.isAnonymous || user.emailVerified);
   const lastHeadingRef = useRef(0);
   const lastHeadingTimeRef = useRef(Date.now());
 
@@ -325,7 +335,8 @@ function App() {
     zodiac: 'Aries',
     targetCountry: 'United States',
     lookingForLove: true,
-    profilePic: ''
+    profilePic: '',
+    bio: ''
   });
 
   const [onboardingStep, setOnboardingStep] = useState(1);
@@ -341,7 +352,8 @@ function App() {
         zodiac: userData.zodiac || 'Aries',
         targetCountry: userData.targetCountry || 'United States',
         lookingForLove: userData.lookingForLove || false,
-        profilePic: userData.profilePic || ''
+        profilePic: userData.profilePic || '',
+        bio: userData.bio || ''
       });
       setOnboardingStep(1);
       setShowOnboarding(true);
@@ -399,6 +411,73 @@ function App() {
     accumulatedRotation.current = next;
     springHeading.set(next);
   }, [heading, springHeading]);
+
+  // AI Insight Trigger for Soulmate Match
+  useEffect(() => {
+    if (!activeLoveMatch || !userData || isGeneratingInsight) return;
+
+    const getInsight = async () => {
+      setIsGeneratingInsight(true);
+      try {
+        const insight = await generateMatchInsight(
+          { name: userData.name, zodiac: userData.zodiac, bio: userData.bio || "Just joined" },
+          { name: activeLoveMatch.name, zodiac: activeLoveMatch.zodiac, bio: activeLoveMatch.bio || "Explorer" }
+        );
+        setMatchInsight(insight);
+      } catch (e) {
+        console.error("Insight error:", e);
+      } finally {
+        setIsGeneratingInsight(false);
+      }
+    };
+
+    getInsight();
+  }, [activeLoveMatch?.uid]);
+
+  // AI Insight Trigger for Chat
+  useEffect(() => {
+    if (!selectedChatUser || !userData || isGeneratingInsight) return;
+    
+    // Reset insight when changing chat
+    setMatchInsight(null);
+    setShowMatchInsight(true);
+    setShowChatActions(false);
+
+    const getInsight = async () => {
+      setIsGeneratingInsight(true);
+      try {
+        // Try to get from chat doc first
+        const chatId = [user?.uid, selectedChatUser.uid].sort().join('_');
+        const chatSnap = await getDoc(doc(db, 'chats', chatId));
+        
+        if (chatSnap.exists() && chatSnap.data().insight) {
+          const storedInsight = typeof chatSnap.data().insight === 'string' 
+            ? JSON.parse(chatSnap.data().insight) 
+            : chatSnap.data().insight;
+          setMatchInsight(storedInsight);
+        } else {
+          const insight = await generateMatchInsight(
+            { name: userData.name, zodiac: userData.zodiac, bio: userData.bio || "Kind soul" },
+            { name: selectedChatUser.name, zodiac: selectedChatUser.zodiac, bio: selectedChatUser.bio || "Dreamer" }
+          );
+          setMatchInsight(insight);
+          
+          // Cache in chat if it exists
+          if (chatSnap.exists()) {
+            await updateDoc(doc(db, 'chats', chatId), {
+              insight: JSON.stringify(insight)
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Chat Insight error:", e);
+      } finally {
+        setIsGeneratingInsight(false);
+      }
+    };
+
+    getInsight();
+  }, [selectedChatUser?.uid]);
 
   // Auth Listener
   useEffect(() => {
@@ -804,6 +883,7 @@ function App() {
         ...onboardingData,
         uid: user.uid,
         lastSeen: serverTimestamp(),
+        isAnonymous: user.isAnonymous || false,
         // Only set these if they don't exist yet
         ...(userData ? {} : { relationshipType: 'love', heading: 0 })
       }, { merge: true });
@@ -815,6 +895,7 @@ function App() {
   };
 
   const handleLogin = async () => {
+    setAuthError(null);
     const provider = new GoogleAuthProvider();
     setIsAuthLoading(true);
     try {
@@ -824,9 +905,63 @@ function App() {
         setIsAuthLoading(false);
         return;
       }
-      console.error("Login error:", error);
+      console.error("Login Error:", error);
+      setAuthError(error.message);
+    } finally {
       setIsAuthLoading(false);
     }
+  };
+
+  const handleAnonymousLogin = async () => {
+    setAuthError(null);
+    setIsAuthLoading(true);
+    try {
+      await signInAnonymously(auth);
+    } catch (error: any) {
+      console.error("Anonymous Login Error:", error);
+      setAuthError(error.message);
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleEmailSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setIsAuthLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, emailInput, passwordInput);
+      await sendEmailVerification(userCredential.user);
+    } catch (error: any) {
+      console.error("Email Signup Error:", error);
+      setAuthError(error.message);
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setIsAuthLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, emailInput, passwordInput);
+    } catch (error: any) {
+      console.error("Email Login Error:", error);
+      setAuthError(error.message);
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const logout = () => {
+    auth.signOut();
+    setUser(null);
+    setUserData(null);
+    setShowWelcome(true);
+    setShowOnboarding(false);
+    setShowSettings(false);
+    setAuthMethod('welcome');
   };
 
   // Connection Test
@@ -1291,26 +1426,155 @@ function App() {
             ))}
           </div>
 
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-8 max-w-sm relative z-10">
-            <div className="w-24 h-24 bg-white rounded-[2rem] shadow-2xl flex items-center justify-center mx-auto border border-[#FFD7D7]">
-              <Heart size={48} className="text-[#E86B6B]" fill="#E86B6B" />
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-6 w-full max-w-sm relative z-10">
+            <div className="w-20 h-20 bg-white rounded-[1.5rem] shadow-xl flex items-center justify-center mx-auto border border-[#FFD7D7]">
+              <Heart size={40} className="text-[#E86B6B]" fill="#E86B6B" />
             </div>
-            <div className="space-y-2">
-              <h1 className="text-5xl font-serif text-[#D4A373]">Amour <span className="italic text-[#E86B6B]">Compass</span></h1>
-              <p className="text-[#8C8970] font-light tracking-widest uppercase text-xs">Find your destiny</p>
+            
+            <div className="space-y-1">
+              <h1 className="text-4xl font-serif text-[#D4A373]">Amour <span className="italic text-[#E86B6B]">Compass</span></h1>
+              <p className="text-[#8C8970] font-bold tracking-[0.2em] uppercase text-[9px]">Your love stars are aligning</p>
             </div>
-            <button 
-              onClick={handleLogin}
-              className="w-full py-5 bg-[#E86B6B] text-white rounded-full flex items-center justify-center gap-3 font-sans font-bold tracking-[0.2em] uppercase text-xs shadow-xl shadow-[#E86B6B]/20 hover:bg-[#D85B5B] transition-all"
-            >
-              <LogIn size={18} />
-              Begin Your Journey
-            </button>
 
-            <div className="pt-8 text-[8px] font-sans font-bold uppercase tracking-[0.4em] text-[#D4A373]/40">
-              All rights reserved for Amour Compass by Crea8tiv
+            <div className="bg-white/50 backdrop-blur-md p-6 rounded-[2rem] border border-white shadow-xl space-y-4">
+              {authMethod === 'welcome' ? (
+                <div className="space-y-3">
+                  <button 
+                    onClick={handleLogin}
+                    disabled={isAuthLoading}
+                    className="w-full py-4 bg-white border-2 border-[#FFD7D7] text-[#4A4A3A] rounded-2xl flex items-center justify-center gap-3 font-sans font-bold tracking-widest uppercase text-[10px] hover:border-[#E86B6B] transition-all shadow-sm"
+                  >
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/smartlock/google.svg" className="w-5 h-5" alt="Google" />
+                    Continue with Google
+                  </button>
+
+                  <button 
+                    onClick={() => setAuthMethod('email')}
+                    disabled={isAuthLoading}
+                    className="w-full py-4 bg-[#E86B6B] text-white rounded-2xl flex items-center justify-center gap-3 font-sans font-bold tracking-widest uppercase text-[10px] shadow-lg shadow-[#E86B6B]/20 hover:bg-[#D85B5B] transition-all"
+                  >
+                    <Mail size={16} />
+                    Continue with Email
+                  </button>
+
+                  <div className="flex items-center gap-4 py-2">
+                    <div className="h-px flex-1 bg-[#FFD7D7]" />
+                    <span className="text-[10px] font-bold text-[#D4A373] uppercase tracking-widest">Or</span>
+                    <div className="h-px flex-1 bg-[#FFD7D7]" />
+                  </div>
+
+                  <button 
+                    onClick={handleAnonymousLogin}
+                    disabled={isAuthLoading}
+                    className="w-full py-4 bg-white/30 border border-dashed border-[#8C8970]/50 text-[#8C8970] rounded-2xl flex items-center justify-center gap-3 font-sans font-bold tracking-widest uppercase text-[10px] hover:bg-white/50 transition-all"
+                  >
+                    <Users size={16} />
+                    Browse Anonymously
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={authMethod === 'email' ? handleEmailLogin : handleEmailSignup} className="space-y-4 text-left">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold uppercase tracking-widest text-[#8C8970] ml-2">Email Address</label>
+                    <input 
+                      required 
+                      type="email" 
+                      value={emailInput}
+                      onChange={e => setEmailInput(e.target.value)}
+                      placeholder="star@amour.com"
+                      className="w-full p-4 bg-white border border-[#FFD7D7] rounded-2xl text-sm focus:border-[#E86B6B] outline-none transition-all shadow-sm" 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold uppercase tracking-widest text-[#8C8970] ml-2">Password</label>
+                    <input 
+                      required 
+                      type="password" 
+                      value={passwordInput}
+                      onChange={e => setPasswordInput(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full p-4 bg-white border border-[#FFD7D7] rounded-2xl text-sm focus:border-[#E86B6B] outline-none transition-all shadow-sm" 
+                    />
+                  </div>
+
+                  <button 
+                    disabled={isAuthLoading}
+                    className="w-full py-4 bg-[#E86B6B] text-white rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-[#E86B6B]/20 transition-all flex items-center justify-center gap-2"
+                  >
+                    {isAuthLoading ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      authMethod === 'email' ? 'Sign In' : 'Create Account'
+                    )}
+                  </button>
+
+                  <div className="flex justify-between items-center px-2">
+                    <button 
+                      type="button" 
+                      onClick={() => setAuthMethod(authMethod === 'email' ? 'signup' : 'email')}
+                      className="text-[10px] font-bold text-[#E86B6B] uppercase tracking-widest hover:underline"
+                    >
+                      {authMethod === 'email' ? "Need an account?" : "Have an account?"}
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setAuthMethod('welcome')}
+                      className="text-[10px] font-bold text-[#8C8970] uppercase tracking-widest hover:underline"
+                    >
+                      Back
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            {authError && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                className="bg-red-50 border border-red-100 p-3 rounded-xl text-red-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"
+              >
+                <AlertCircle size={14} />
+                {authError}
+              </motion.div>
+            )}
+
+            <div className="pt-4 text-[8px] font-sans font-bold uppercase tracking-[0.4em] text-[#D4A373]/40">
+              By continuing you agree to the stars
             </div>
           </motion.div>
+        </motion.div>
+      ) : !isFullyAuthed ? (
+        <motion.div 
+          key="verify" 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          className="min-h-screen bg-[#FFF5F5] flex flex-col items-center justify-center p-6 text-center"
+        >
+          <div className="max-w-sm space-y-8 bg-white p-10 rounded-[3rem] border border-[#FFD7D7] shadow-xl">
+            <div className="w-20 h-20 bg-[#FFF5F5] rounded-full flex items-center justify-center mx-auto border-2 border-[#E86B6B]">
+              <Mail size={40} className="text-[#E86B6B] animate-pulse" />
+            </div>
+            <div className="space-y-3">
+              <h2 className="text-3xl font-serif text-[#D4A373]">Verify your <span className="italic text-[#E86B6B]">Email</span></h2>
+              <p className="text-sm text-[#8C8970] leading-relaxed">
+                We've sent a cosmic link to <span className="font-bold text-[#4A4A3A]">{user.email}</span>. Please verify your email to unlock the compass.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <button 
+                onClick={() => window.location.reload()}
+                className="w-full py-4 bg-[#E86B6B] text-white rounded-full font-bold uppercase tracking-widest text-xs shadow-lg shadow-[#E86B6B]/20"
+              >
+                I've Verified My Email
+              </button>
+              <button 
+                onClick={logout}
+                className="w-full py-4 text-[#8C8970] font-bold uppercase tracking-widest text-[10px] hover:text-[#E86B6B]"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
         </motion.div>
       ) : showWelcome ? (
         <motion.div 
@@ -1415,6 +1679,16 @@ function App() {
                         value={onboardingData.name} 
                         onChange={e => setOnboardingData({...onboardingData, name: e.target.value})} 
                         className="w-full p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-2xl text-center text-lg font-serif" 
+                      />
+                    </div>
+                    <div className="space-y-1 w-full text-center">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Your Vibe & Bio</label>
+                      <textarea 
+                        required 
+                        placeholder="Tell the stars about yourself..."
+                        value={onboardingData.bio} 
+                        onChange={e => setOnboardingData({...onboardingData, bio: e.target.value})} 
+                        className="w-full p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-2xl text-center text-sm font-sans min-h-[80px] resize-none" 
                       />
                     </div>
                   </div>
@@ -1665,6 +1939,62 @@ function App() {
                       </div>
                     </div>
                   </div>
+
+                  {/* AI Insight Card */}
+                  <AnimatePresence>
+                    {matchInsight && !isGeneratingInsight && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-4 bg-gradient-to-br from-[#FFF5F5] to-white rounded-2xl border border-[#FFD7D7] shadow-inner text-left space-y-3"
+                      >
+                        <div className="flex items-center gap-2 text-[#E86B6B]">
+                          <Sparkles size={14} className="animate-pulse" />
+                          <span className="text-[10px] font-bold uppercase tracking-widest font-sans">{matchInsight.reason}</span>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <div className="w-1 h-auto bg-[#E86B6B]/20 rounded-full" />
+                            <p className="text-[11px] text-[#4A4A3A] italic leading-tight">"{matchInsight.myVibe}"</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <div className="w-1 h-auto bg-[#D4A373]/20 rounded-full" />
+                            <p className="text-[11px] text-[#8C8970] italic leading-tight">"{matchInsight.theirVibe}"</p>
+                          </div>
+                        </div>
+                        <p className="text-[10px] font-bold text-[#D4A373] uppercase tracking-wider text-center pt-1 border-t border-[#FFD7D7]/30">
+                          {matchInsight.conclusion}
+                        </p>
+
+                        {matchInsight.icebreakers && (
+                          <div className="pt-2 flex flex-wrap gap-1.5 justify-center">
+                            {matchInsight.icebreakers.slice(0, 2).map((ice, i) => (
+                              <button
+                                key={i}
+                                onClick={() => {
+                                  setChatInput(ice);
+                                  openChat(activeLoveMatch);
+                                  setDismissedLoveMatchId(activeLoveMatch.uid);
+                                  setActiveLoveMatch(null);
+                                }}
+                                className="px-2 py-1 bg-[#D4A373]/5 border border-[#D4A373]/20 rounded-lg text-[8px] font-bold text-[#D4A373] uppercase tracking-tight hover:bg-[#D4A373]/10 transition-all max-w-full truncate"
+                              >
+                                {ice}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                    {isGeneratingInsight && (
+                      <div className="py-4 flex flex-col items-center gap-2 text-[#C0C0C0]">
+                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
+                          <Sparkles size={20} />
+                        </motion.div>
+                        <span className="text-[9px] font-bold uppercase tracking-widest animate-pulse">Reading the alignment...</span>
+                      </div>
+                    )}
+                  </AnimatePresence>
 
                   <div className="space-y-3 pt-2">
                     <button 
@@ -2318,10 +2648,7 @@ function App() {
 
                     <div className="pt-4">
                       <button 
-                        onClick={() => {
-                          auth.signOut();
-                          setShowSettings(false);
-                        }}
+                        onClick={logout}
                         className="w-full py-3 sm:py-4 text-[10px] font-bold uppercase tracking-widest text-[#E86B6B] hover:bg-[#E86B6B]/5 rounded-2xl transition-all"
                       >
                         Sign Out
@@ -2385,58 +2712,99 @@ function App() {
                 ) : (
                   <>
                     {/* Chat Header */}
-                <div className="pt-12 pb-4 px-6 border-b border-[#FFD7D7] flex justify-between items-center bg-white shadow-sm">
-                  <div className="flex items-center gap-3">
+                <div className="pt-10 pb-3 px-4 border-b border-[#FFD7D7] flex justify-between items-center bg-white shadow-xs">
+                  <div className="flex items-center gap-2">
                     <button 
                       onClick={closeChat} 
-                      className="p-2 -ml-2 text-[#8C8970] hover:text-[#E86B6B] transition-colors"
+                      className="p-1 text-[#8C8970] hover:text-[#E86B6B] transition-colors"
                     >
-                      <ArrowLeft size={24} />
+                      <ArrowLeft size={20} />
                     </button>
                     <div className="relative">
                       {selectedChatUser.profilePic ? (
-                        <img src={selectedChatUser.profilePic} alt={selectedChatUser.name} className="w-10 h-10 rounded-xl object-cover border border-[#FFD7D7] shadow-sm" referrerPolicy="no-referrer" />
+                        <img src={selectedChatUser.profilePic} alt={selectedChatUser.name} className="w-9 h-9 rounded-xl object-cover border border-[#FFD7D7] shadow-sm" referrerPolicy="no-referrer" />
                       ) : (
-                        <div className="w-10 h-10 bg-[#E86B6B] rounded-xl flex items-center justify-center text-white font-serif italic text-lg shadow-sm">
+                        <div className="w-9 h-9 bg-[#E86B6B] rounded-xl flex items-center justify-center text-white font-serif italic text-lg shadow-sm">
                           {selectedChatUser.name[0]}
                         </div>
                       )}
                       {selectedChatUser.lastSeen?.toMillis && selectedChatUser.lastSeen.toMillis() > Date.now() - 300000 && (
-                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
+                        <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
                       )}
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-[#4A4A3A]">{selectedChatUser.name}</h3>
-                      <p className="text-[10px] text-[#8C8970] uppercase tracking-widest">{selectedChatUser.zodiac} • {selectedChatUser.country}</p>
+                      <h3 className="text-xs font-bold text-[#4A4A3A] truncate max-w-[80px]">{selectedChatUser.name}</h3>
+                      <p className="text-[9px] text-[#8C8970] uppercase tracking-tighter truncate">{selectedChatUser.zodiac}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <button 
+                      onClick={() => !showMatchInsight && setShowMatchInsight(true)}
+                      className={`p-2 rounded-lg transition-all ${matchInsight ? 'text-[#D4A373]' : 'hidden'}`}
+                    >
+                      <Sparkles size={16} fill={showMatchInsight ? 'currentColor' : 'none'} />
+                    </button>
                     <button 
                       onClick={() => {
                         setGlobeMatches([selectedChatUser]);
                         setShowGlobe(true);
                       }}
-                      className="p-2 rounded-xl border border-[#FFD7D7] bg-white text-[#8C8970] hover:text-[#E86B6B] hover:border-[#E86B6B] transition-all"
-                      title="See on globe"
+                      className="p-1.5 rounded-lg border border-[#FFD7D7] bg-white text-[#8C8970] hover:text-[#E86B6B] transition-all"
                     >
-                      <Globe size={18} />
-                    </button>
-                    <button 
-                      onClick={() => toggleSaved(selectedChatUser.uid, 'friends')}
-                      className={`p-2 rounded-xl border transition-all ${userData?.friends?.includes(selectedChatUser.uid) ? 'bg-[#D4A373] border-[#D4A373] text-white' : 'bg-white border-[#FFD7D7] text-[#8C8970]'}`}
-                      title={userData?.friends?.includes(selectedChatUser.uid) ? "Remove Friend" : "Add Friend"}
-                    >
-                      <UserPlus size={18} />
+                      <Globe size={16} />
                     </button>
                     <button 
                       onClick={() => toggleSaved(selectedChatUser.uid, 'loves')}
-                      className={`p-2 rounded-xl border transition-all ${userData?.loves?.includes(selectedChatUser.uid) ? 'bg-[#E86B6B] border-[#E86B6B] text-white' : 'bg-white border-[#FFD7D7] text-[#8C8970]'}`}
-                      title={userData?.loves?.includes(selectedChatUser.uid) ? "Remove from Love List" : "Add to Love List"}
+                      className={`p-1.5 rounded-lg border transition-all ${userData?.loves?.includes(selectedChatUser.uid) ? 'bg-[#E86B6B] border-[#E86B6B] text-white' : 'bg-white border-[#FFD7D7] text-[#8C8970]'}`}
                     >
-                      <Heart size={18} />
+                      <Heart size={16} fill={userData?.loves?.includes(selectedChatUser.uid) ? 'currentColor' : 'none'} />
                     </button>
                   </div>
                 </div>
+                
+                {/* AI Chat Insight - More compact and dismissible */}
+                <AnimatePresence>
+                  {matchInsight && hasAcceptedSafetyWarning && showMatchInsight && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="px-4 py-2 bg-[#FFF5F5]/30 border-b border-[#FFD7D7] overflow-hidden relative"
+                    >
+                      <button 
+                        onClick={() => setShowMatchInsight(false)}
+                        className="absolute top-2 right-2 p-1 text-[#8C8970]/40 hover:text-[#E86B6B] transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                      <div className="flex gap-3 items-center">
+                        <div className="shrink-0 w-8 h-8 bg-white rounded-lg flex items-center justify-center text-[#D4A373] border border-[#FFD7D7] shadow-xs">
+                          <Sparkles size={16} />
+                        </div>
+                        <p className="text-[10px] text-[#4A4A3A] leading-tight italic pr-6 italic line-clamp-2">
+                          <span className="text-[#E86B6B] font-bold">Insight:</span> {matchInsight.myVibe} {matchInsight.conclusion}
+                        </p>
+                      </div>
+                      
+                      {matchInsight.icebreakers && matchInsight.icebreakers.length > 0 && (
+                        <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                          {matchInsight.icebreakers.map((icebreaker, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => {
+                                setChatInput(icebreaker);
+                                setShowMatchInsight(false);
+                              }}
+                              className="shrink-0 px-2.5 py-1 bg-white border border-[#FFD7D7] rounded-full text-[8px] font-medium text-[#8C8970] shadow-xs transition-all whitespace-nowrap"
+                            >
+                              ✨ {icebreaker}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                   {/* Potential Soulmates Section */}
                   {soulmateMatches.length > 0 && (
@@ -2486,35 +2854,35 @@ function App() {
                               : 'bg-white border border-[#FFD7D7] text-[#4A4A3A] rounded-tl-none'
                           }`}>
                             {msg.type === 'card_request' ? (
-                              <div className="space-y-3 min-w-[200px]">
-                                <div className={`flex items-center gap-2 mb-2 ${msg.senderId === user.uid ? 'text-white/80' : 'text-[#8C8970]'}`}>
-                                  {msg.cardType === 'soulmate' ? <Heart size={14} fill={msg.senderId === user.uid ? 'white' : '#E86B6B'} className={msg.senderId === user.uid ? 'text-white' : 'text-[#E86B6B]'} /> : <Sparkles size={14} className={msg.senderId === user.uid ? 'text-white' : 'text-[#D4A373]'} />}
-                                  <span className="text-[10px] font-bold uppercase tracking-widest">
-                                    {msg.senderId === user.uid ? `You requested a ${msg.cardType} card` : `${selectedChatUser.name} requested a ${msg.cardType} card`}
-                                  </span>
+                              <div className="space-y-2 min-w-[180px]">
+                                <div className={`flex items-center gap-2 ${msg.senderId === user.uid ? 'text-white/80' : 'text-[#8C8970]'}`}>
+                                  {msg.cardType === 'soulmate' ? <Heart size={12} fill={msg.senderId === user.uid ? 'white' : '#E86B6B'} /> : <Sparkles size={12} />}
+                                  <p className="text-[9px] font-bold uppercase tracking-widest leading-none">
+                                    {msg.senderId === user.uid ? `Card Requested` : `${selectedChatUser.name} requested card`}
+                                  </p>
                                 </div>
                                 
                                 {msg.status === 'pending' && msg.senderId !== user.uid && (
                                   <div className="flex gap-2">
                                     <button 
                                       onClick={() => respondToCardRequest(msg.id, 'accepted', msg.cardType)}
-                                      className="flex-1 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-1 shadow-sm hover:bg-emerald-600 transition-colors"
+                                      className="flex-1 py-1.5 bg-emerald-500 text-white rounded-lg text-[9px] font-bold uppercase flex items-center justify-center gap-1 shadow-sm"
                                     >
-                                      <Check size={12} /> Accept
+                                      Accept
                                     </button>
                                     <button 
                                       onClick={() => respondToCardRequest(msg.id, 'declined', msg.cardType)}
-                                      className="flex-1 py-2 bg-[#8C8970]/10 text-[#8C8970] rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-1 hover:bg-[#8C8970]/20 transition-colors"
+                                      className="flex-1 py-1.5 bg-black/10 text-black/40 rounded-lg text-[9px] font-bold uppercase flex items-center justify-center gap-1"
                                     >
-                                      <X size={12} /> Decline
+                                      Decline
                                     </button>
                                   </div>
                                 )}
                                 
                                 {msg.status !== 'pending' && (
-                                  <div className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 ${msg.status === 'accepted' ? (msg.senderId === user.uid ? 'text-white' : 'text-emerald-500') : (msg.senderId === user.uid ? 'text-white/60' : 'text-[#E86B6B]')}`}>
-                                    {msg.status === 'accepted' ? <Check size={12} /> : <XCircle size={12} />}
-                                    {msg.status === 'accepted' ? 'Request Accepted' : 'Request Declined'}
+                                  <div className={`text-[9px] font-bold uppercase flex items-center gap-1 ${msg.status === 'accepted' ? 'text-emerald-500' : 'text-red-400'} ${msg.senderId === user.uid ? 'text-white' : ''}`}>
+                                    {msg.status === 'accepted' ? <Check size={10} /> : <XCircle size={10} />}
+                                    {msg.status === 'accepted' ? 'Accepted' : 'Declined'}
                                   </div>
                                 )}
                               </div>
@@ -2575,48 +2943,71 @@ function App() {
                     )}
                   </div>
 
-                  {/* Chat Input */}
-                  <div className="pb-10 pt-6 px-6 border-t border-[#FFD7D7] space-y-4 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
-                    {/* Card Selection Menu */}
-                    <div className="flex justify-center gap-3">
-                      <button 
-                        onClick={() => sendCardRequest('soulmate')}
-                        className="px-4 py-2 bg-[#FFF5F5] border border-[#E86B6B] text-[#E86B6B] rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#E86B6B] hover:text-white transition-all shadow-sm"
-                      >
-                        <Heart size={12} fill="currentColor" /> Soulmate Card
-                      </button>
-                      <button 
-                        onClick={() => sendCardRequest('friendship')}
-                        className="px-4 py-2 bg-[#FDFCF8] border border-[#D4A373] text-[#D4A373] rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#D4A373] hover:text-white transition-all shadow-sm"
-                      >
-                        <Sparkles size={12} /> Friendship Card
-                      </button>
-                    </div>
-
-                    <div className="flex justify-center gap-6">
-                      <button 
-                        onClick={() => sendChatMessage('emoji', '❤️')}
-                        className="w-12 h-12 rounded-2xl bg-[#FFF5F5] border border-[#FFD7D7] flex items-center justify-center text-2xl hover:scale-110 transition-transform"
-                      >
-                        ❤️
-                      </button>
-                      <button 
-                        onClick={() => sendChatMessage('emoji', '🫂')}
-                        className="w-12 h-12 rounded-2xl bg-[#FFF5F5] border border-[#FFD7D7] flex items-center justify-center text-2xl hover:scale-110 transition-transform"
-                      >
-                        🫂
-                      </button>
-                    </div>
+                  {/* Chat Input Area */}
+                  <div className="pb-8 pt-4 px-4 border-t border-[#FFD7D7] bg-white relative z-50">
+                    <AnimatePresence>
+                      {showChatActions && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          className="absolute bottom-full left-4 mb-4 p-4 bg-white rounded-3xl border border-[#FFD7D7] shadow-2xl space-y-4 min-w-[200px]"
+                        >
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-bold text-[#8C8970] uppercase tracking-widest pl-2">Send Magic Card</p>
+                            <button 
+                              onClick={() => { sendCardRequest('soulmate'); setShowChatActions(false); }}
+                              className="w-full flex items-center gap-3 p-3 bg-[#FFF5F5] rounded-2xl border border-[#FFD7D7] hover:bg-[#E86B6B]/10 transition-all group"
+                            >
+                              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[#E86B6B] shadow-sm">
+                                <Heart size={14} fill="currentColor" />
+                              </div>
+                              <span className="text-xs font-bold text-[#4A4A3A]">Soulmate Card</span>
+                            </button>
+                            <button 
+                              onClick={() => { sendCardRequest('friendship'); setShowChatActions(false); }}
+                              className="w-full flex items-center gap-3 p-3 bg-[#FDFCF8] rounded-2xl border border-[#D4A373]/20 hover:bg-[#D4A373]/10 transition-all group"
+                            >
+                              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[#D4A373] shadow-sm">
+                                <Sparkles size={14} />
+                              </div>
+                              <span className="text-xs font-bold text-[#4A4A3A]">Friendship Card</span>
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-bold text-[#8C8970] uppercase tracking-widest pl-2">Quick Reaction</p>
+                            <div className="flex gap-2">
+                              {['❤️', '🫂', '✨', '🌹'].map(emoji => (
+                                <button 
+                                  key={emoji}
+                                  onClick={() => { sendChatMessage('emoji', emoji); setShowChatActions(false); }}
+                                  className="flex-1 py-3 bg-[#FFF5F5] border border-[#FFD7D7] rounded-xl text-xl hover:scale-110 transition-transform"
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                     
-                    <div className="flex gap-2">
-                      <div className="flex-1 relative">
+                    <div className="flex gap-2 items-end">
+                      <button 
+                        onClick={() => setShowChatActions(!showChatActions)}
+                        className={`p-3.5 rounded-2xl border transition-all shrink-0 ${showChatActions ? 'bg-[#4A4A3A] border-[#4A4A3A] text-white rotate-45' : 'bg-[#FFF5F5] border-[#FFD7D7] text-[#E86B6B] hover:shadow-md'}`}
+                      >
+                        <Plus size={20} />
+                      </button>
+                      
+                      <div className="flex-1 relative pb-0.5">
                         <AnimatePresence>
                           {chatError && (
                             <motion.div 
                               initial={{ opacity: 0, y: 10 }} 
                               animate={{ opacity: 1, y: 0 }} 
                               exit={{ opacity: 0, y: 10 }}
-                              className="absolute -top-10 left-0 right-0 bg-red-100 text-red-600 text-[10px] font-bold uppercase tracking-widest p-2 rounded-xl text-center border border-red-200 shadow-sm"
+                              className="absolute -top-10 left-0 right-0 bg-red-100 text-red-600 text-[10px] font-bold uppercase tracking-widest p-2 rounded-xl text-center border border-red-200 shadow-sm z-50"
                             >
                               {chatError}
                             </motion.div>
@@ -2625,15 +3016,16 @@ function App() {
                         <input 
                           value={chatInput}
                           onChange={(e) => setChatInput(e.target.value)}
+                          onFocus={() => setShowChatActions(false)}
                           onKeyDown={(e) => e.key === 'Enter' && chatInput && sendChatMessage('text', chatInput)}
-                          placeholder="Type a message..."
-                          className="w-full p-4 bg-[#FFF5F5]/50 border border-[#FFD7D7] rounded-2xl focus:outline-none focus:border-[#E86B6B] transition-all text-sm"
+                          placeholder="Speak from the heart..."
+                          className="w-full p-3.5 bg-[#FFF5F5]/50 border border-[#FFD7D7] rounded-2xl focus:outline-none focus:border-[#E86B6B] transition-all text-sm placeholder:text-[#8C8970]/50"
                         />
                       </div>
                       <button 
                         onClick={() => chatInput && sendChatMessage('text', chatInput)}
                         disabled={!chatInput}
-                        className="p-4 bg-[#E86B6B] text-white rounded-2xl disabled:opacity-50 hover:shadow-lg transition-all shrink-0"
+                        className="p-3.5 bg-[#E86B6B] text-white rounded-2xl disabled:opacity-50 hover:shadow-lg transition-all shrink-0 shadow-sm"
                       >
                         <Send size={20} />
                       </button>

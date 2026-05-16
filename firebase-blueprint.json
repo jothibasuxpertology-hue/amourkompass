@@ -25,6 +25,7 @@
         "lastSeen": { "type": "string", "format": "date-time" },
         "relationshipType": { "type": "string", "enum": ["friend", "love"] },
         "lookingForLove": { "type": "boolean", "description": "Whether the user is actively looking for a romantic connection." },
+        "bio": { "type": "string", "description": "A short self-description or vibe of the user." },
         "phoneNumber": { "type": "string", "description": "The user's verified phone number." },
         "phoneNumberVerified": { "type": "boolean", "description": "Whether the phone number has been verified." },
         "friends": {
@@ -71,6 +72,10 @@
         "participants": { "type": "array", "items": { "type": "string" } },
         "lastMessage": { "type": "object" },
         "updatedAt": { "type": "string", "format": "date-time" },
+        "insight": { 
+          "type": "string", 
+          "description": "AI-generated insight about why these two users matched." 
+        },
         "lastRead": { 
           "type": "object", 
           "description": "Map of userId to timestamp of when they last read the chat." 
