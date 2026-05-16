@@ -259,7 +259,6 @@ const ZODIAC_COMPATIBILITY: { [key: string]: string[] } = {
 };
 
 import { PROFILE_PICS } from './profilePics';
-import { generateMatchInsight, MatchInsight } from './services/aiService';
 
 function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -313,10 +312,7 @@ function App() {
   const [notification, setNotification] = useState<{ name: string; text: string; uid: string } | null>(null);
   const [sensorStatus, setSensorStatus] = useState<'inactive' | 'active' | 'stuck' | 'relative'>('inactive');
   const [hasAcceptedSafetyWarning, setHasAcceptedSafetyWarning] = useState(false);
-  const [matchInsight, setMatchInsight] = useState<MatchInsight | null>(null);
-  const [isGeneratingInsight, setIsGeneratingInsight] = useState(false);
   const [showChatActions, setShowChatActions] = useState(false);
-  const [showMatchInsight, setShowMatchInsight] = useState(true);
   const [authMethod, setAuthMethod] = useState<'welcome' | 'email' | 'signup'>('welcome');
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -411,73 +407,6 @@ function App() {
     accumulatedRotation.current = next;
     springHeading.set(next);
   }, [heading, springHeading]);
-
-  // AI Insight Trigger for Soulmate Match
-  useEffect(() => {
-    if (!activeLoveMatch || !userData || isGeneratingInsight) return;
-
-    const getInsight = async () => {
-      setIsGeneratingInsight(true);
-      try {
-        const insight = await generateMatchInsight(
-          { name: userData.name, zodiac: userData.zodiac, bio: userData.bio || "Just joined" },
-          { name: activeLoveMatch.name, zodiac: activeLoveMatch.zodiac, bio: activeLoveMatch.bio || "Explorer" }
-        );
-        setMatchInsight(insight);
-      } catch (e) {
-        console.error("Insight error:", e);
-      } finally {
-        setIsGeneratingInsight(false);
-      }
-    };
-
-    getInsight();
-  }, [activeLoveMatch?.uid]);
-
-  // AI Insight Trigger for Chat
-  useEffect(() => {
-    if (!selectedChatUser || !userData || isGeneratingInsight) return;
-    
-    // Reset insight when changing chat
-    setMatchInsight(null);
-    setShowMatchInsight(true);
-    setShowChatActions(false);
-
-    const getInsight = async () => {
-      setIsGeneratingInsight(true);
-      try {
-        // Try to get from chat doc first
-        const chatId = [user?.uid, selectedChatUser.uid].sort().join('_');
-        const chatSnap = await getDoc(doc(db, 'chats', chatId));
-        
-        if (chatSnap.exists() && chatSnap.data().insight) {
-          const storedInsight = typeof chatSnap.data().insight === 'string' 
-            ? JSON.parse(chatSnap.data().insight) 
-            : chatSnap.data().insight;
-          setMatchInsight(storedInsight);
-        } else {
-          const insight = await generateMatchInsight(
-            { name: userData.name, zodiac: userData.zodiac, bio: userData.bio || "Kind soul" },
-            { name: selectedChatUser.name, zodiac: selectedChatUser.zodiac, bio: selectedChatUser.bio || "Dreamer" }
-          );
-          setMatchInsight(insight);
-          
-          // Cache in chat if it exists
-          if (chatSnap.exists()) {
-            await updateDoc(doc(db, 'chats', chatId), {
-              insight: JSON.stringify(insight)
-            });
-          }
-        }
-      } catch (e) {
-        console.error("Chat Insight error:", e);
-      } finally {
-        setIsGeneratingInsight(false);
-      }
-    };
-
-    getInsight();
-  }, [selectedChatUser?.uid]);
 
   // Auth Listener
   useEffect(() => {
@@ -1439,14 +1368,19 @@ function App() {
             <div className="bg-white/50 backdrop-blur-md p-6 rounded-[2rem] border border-white shadow-xl space-y-4">
               {authMethod === 'welcome' ? (
                 <div className="space-y-3">
-                  <button 
+                  <motion.button 
+                    whileTap={{ scale: 0.98 }}
                     onClick={handleLogin}
                     disabled={isAuthLoading}
                     className="w-full py-4 bg-white border-2 border-[#FFD7D7] text-[#4A4A3A] rounded-2xl flex items-center justify-center gap-3 font-sans font-bold tracking-widest uppercase text-[10px] hover:border-[#E86B6B] transition-all shadow-sm"
                   >
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/smartlock/google.svg" className="w-5 h-5" alt="Google" />
+                    <img 
+                      src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCIgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4Ij48cGF0aCBmaWxsPSIjRUE0MzM1IiBkPSJNMjQgOS41YzMuNTQgMCA2LjczIDEuMjIgOS4yMyAzLjU4bDYuOTEtNi45MUMzNS40MyAyLjQ3IDMwLjI0IDAgMjQgMEMxNC45OSAwIDcuNDEgNS43IDQuNTQgMTMuOTdsNy40NyA1LjgxQzEzLjg3IDEyLjMzIDE4LjQ3IDkuNSAyNCA5LjV6Ii8+PHBhdGggZmlsbD0iIzQyODVGNCIgZD0iTTQ2Ljk4IDI0LjU1YzAgLTEuNjEtLjE0LTMuMTctLjM5LTQuNTVIMjR2OS4wMmgxMi45NGMtLjU2IDIuOTYtMi4yNiA1LjQ4LTQuNzcgNy4xOGw3LjQ3IDUuODFjNC4zOC00LjA1IDYuOTItNC4wNSA2LjkyLTE3LjQ2eiIvPjxwYXRoIGZpbGw9IiNGQkJDMDQiIGQ9Ik0xMC41MyAyOC41OWMtLjQ4LTEuNDEtLjc2LTIuOTEtLjc2LTQuNDVzLjI4LTMuMDQuNzYtNC40NWwtNy40Ny01LjgxQy42NCAxNy45MSAwIDIwLjkxIDAgMjRzLjY0IDYuMDkgMi4zMiA5LjIybDcuNTYtNS42MnoiLz48cGF0aCBmaWxsPSIjMzRBODUzIiBkPSJNMjQgNDhjNi40OCAwIDExLjkzLTIuMTMgMTUuODktNS44MWwtNy40Ny01LjgxYy0yLjA2IDEuMTEtNC43MiAxLjc3LTcuNDcgMS43Ny05LjUzIDAtMTAuMTMtMy43NC0xMS44LTguNzlMLjY0IDM0LjhDMy4zMiA0Mi4zIDExLjU0IDQ4IDI0IDQ4eiIvPjxwYXRoIGZpbGw9Im5vbmUiIGQ9Ik0wIDBoNDh2NDhoLTQ4eiIvPjwvc3ZnPg==" 
+                      className="w-5 h-5" 
+                      alt="Google" 
+                    />
                     Continue with Google
-                  </button>
+                  </motion.button>
 
                   <button 
                     onClick={() => setAuthMethod('email')}
@@ -1939,62 +1873,6 @@ function App() {
                       </div>
                     </div>
                   </div>
-
-                  {/* AI Insight Card */}
-                  <AnimatePresence>
-                    {matchInsight && !isGeneratingInsight && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="p-4 bg-gradient-to-br from-[#FFF5F5] to-white rounded-2xl border border-[#FFD7D7] shadow-inner text-left space-y-3"
-                      >
-                        <div className="flex items-center gap-2 text-[#E86B6B]">
-                          <Sparkles size={14} className="animate-pulse" />
-                          <span className="text-[10px] font-bold uppercase tracking-widest font-sans">{matchInsight.reason}</span>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex gap-2">
-                            <div className="w-1 h-auto bg-[#E86B6B]/20 rounded-full" />
-                            <p className="text-[11px] text-[#4A4A3A] italic leading-tight">"{matchInsight.myVibe}"</p>
-                          </div>
-                          <div className="flex gap-2">
-                            <div className="w-1 h-auto bg-[#D4A373]/20 rounded-full" />
-                            <p className="text-[11px] text-[#8C8970] italic leading-tight">"{matchInsight.theirVibe}"</p>
-                          </div>
-                        </div>
-                        <p className="text-[10px] font-bold text-[#D4A373] uppercase tracking-wider text-center pt-1 border-t border-[#FFD7D7]/30">
-                          {matchInsight.conclusion}
-                        </p>
-
-                        {matchInsight.icebreakers && (
-                          <div className="pt-2 flex flex-wrap gap-1.5 justify-center">
-                            {matchInsight.icebreakers.slice(0, 2).map((ice, i) => (
-                              <button
-                                key={i}
-                                onClick={() => {
-                                  setChatInput(ice);
-                                  openChat(activeLoveMatch);
-                                  setDismissedLoveMatchId(activeLoveMatch.uid);
-                                  setActiveLoveMatch(null);
-                                }}
-                                className="px-2 py-1 bg-[#D4A373]/5 border border-[#D4A373]/20 rounded-lg text-[8px] font-bold text-[#D4A373] uppercase tracking-tight hover:bg-[#D4A373]/10 transition-all max-w-full truncate"
-                              >
-                                {ice}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </motion.div>
-                    )}
-                    {isGeneratingInsight && (
-                      <div className="py-4 flex flex-col items-center gap-2 text-[#C0C0C0]">
-                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
-                          <Sparkles size={20} />
-                        </motion.div>
-                        <span className="text-[9px] font-bold uppercase tracking-widest animate-pulse">Reading the alignment...</span>
-                      </div>
-                    )}
-                  </AnimatePresence>
 
                   <div className="space-y-3 pt-2">
                     <button 
@@ -2739,12 +2617,6 @@ function App() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button 
-                      onClick={() => !showMatchInsight && setShowMatchInsight(true)}
-                      className={`p-2 rounded-lg transition-all ${matchInsight ? 'text-[#D4A373]' : 'hidden'}`}
-                    >
-                      <Sparkles size={16} fill={showMatchInsight ? 'currentColor' : 'none'} />
-                    </button>
-                    <button 
                       onClick={() => {
                         setGlobeMatches([selectedChatUser]);
                         setShowGlobe(true);
@@ -2762,49 +2634,6 @@ function App() {
                   </div>
                 </div>
                 
-                {/* AI Chat Insight - More compact and dismissible */}
-                <AnimatePresence>
-                  {matchInsight && hasAcceptedSafetyWarning && showMatchInsight && (
-                    <motion.div 
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="px-4 py-2 bg-[#FFF5F5]/30 border-b border-[#FFD7D7] overflow-hidden relative"
-                    >
-                      <button 
-                        onClick={() => setShowMatchInsight(false)}
-                        className="absolute top-2 right-2 p-1 text-[#8C8970]/40 hover:text-[#E86B6B] transition-colors"
-                      >
-                        <X size={14} />
-                      </button>
-                      <div className="flex gap-3 items-center">
-                        <div className="shrink-0 w-8 h-8 bg-white rounded-lg flex items-center justify-center text-[#D4A373] border border-[#FFD7D7] shadow-xs">
-                          <Sparkles size={16} />
-                        </div>
-                        <p className="text-[10px] text-[#4A4A3A] leading-tight italic pr-6 italic line-clamp-2">
-                          <span className="text-[#E86B6B] font-bold">Insight:</span> {matchInsight.myVibe} {matchInsight.conclusion}
-                        </p>
-                      </div>
-                      
-                      {matchInsight.icebreakers && matchInsight.icebreakers.length > 0 && (
-                        <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                          {matchInsight.icebreakers.map((icebreaker, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => {
-                                setChatInput(icebreaker);
-                                setShowMatchInsight(false);
-                              }}
-                              className="shrink-0 px-2.5 py-1 bg-white border border-[#FFD7D7] rounded-full text-[8px] font-medium text-[#8C8970] shadow-xs transition-all whitespace-nowrap"
-                            >
-                              ✨ {icebreaker}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
 
                   {/* Potential Soulmates Section */}
                   {soulmateMatches.length > 0 && (
