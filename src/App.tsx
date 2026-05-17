@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, Component } from 'react';
 import { motion, AnimatePresence, useSpring } from 'motion/react';
-import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft, Download, Share2, Check, XCircle, ShieldCheck, Instagram, Mail, Globe, Plus, Flame } from 'lucide-react';
+import { Compass, Navigation, Heart, Info, MapPin, AlertCircle, Users, LogIn, LogOut, Settings, Sparkles, UserPlus, MessageCircle, Send, Smile, X, ArrowLeft, Download, Share2, Check, XCircle, ShieldCheck, Instagram, Mail, Globe, Plus } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { auth, db } from './firebase';
 import SoulmateGlobe from './components/SoulmateGlobe';
@@ -312,7 +312,6 @@ function App() {
   const [notification, setNotification] = useState<{ name: string; text: string; uid: string } | null>(null);
   const [sensorStatus, setSensorStatus] = useState<'inactive' | 'active' | 'stuck' | 'relative'>('inactive');
   const [hasAcceptedSafetyWarning, setHasAcceptedSafetyWarning] = useState(false);
-  const [flamesResult, setFlamesResult] = useState<{ result: any; names: string[] } | null>(null);
   const [showChatActions, setShowChatActions] = useState(false);
   const [authMethod, setAuthMethod] = useState<'welcome' | 'email' | 'signup'>('welcome');
   const [emailInput, setEmailInput] = useState('');
@@ -583,50 +582,6 @@ function App() {
       setDismissedLoveMatchId(null);
     }
   }, [heading, allUsers, userData, dismissedLoveMatchId]);
-
-  const calculateFLAMES = (name1: string, name2: string) => {
-    const n1 = name1.toLowerCase().replace(/[^a-z]/g, '').split('');
-    const n2 = name2.toLowerCase().replace(/[^a-z]/g, '').split('');
-
-    const temp1 = [...n1];
-    const temp2 = [...n2];
-
-    for (let i = 0; i < temp1.length; i++) {
-      const index = temp2.indexOf(temp1[i]);
-      if (index !== -1) {
-        temp1.splice(i, 1);
-        temp2.splice(index, 1);
-        i--;
-      }
-    }
-
-    const count = temp1.length + temp2.length;
-    if (count === 0) return { label: 'Soulmates', color: '#E86B6B', icon: '✨' };
-
-    const flames = [
-      { label: 'Friend', color: '#D4A373', icon: '🤝' },
-      { label: 'Love', color: '#E86B6B', icon: '❤️' },
-      { label: 'Affection', color: '#FF8FAB', icon: '💖' },
-      { label: 'Marriage', color: '#E86B6B', icon: '💍' },
-      { label: 'Enemy', color: '#8C8970', icon: '⚔️' },
-      { label: 'Sibling', color: '#BDE0FE', icon: '🏠' }
-    ];
-
-    let res = [...flames];
-    let ptr = 0;
-    while (res.length > 1) {
-      ptr = (ptr + count - 1) % res.length;
-      res.splice(ptr, 1);
-    }
-
-    return res[0];
-  };
-
-  const handlePlayFlames = () => {
-    if (!userData || !selectedChatUser) return;
-    const result = calculateFLAMES(userData.name, selectedChatUser.name);
-    setFlamesResult({ result, names: [userData.name, selectedChatUser.name] });
-  };
 
   // Listen to User Data
   useEffect(() => {
@@ -2683,13 +2638,6 @@ function App() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button 
-                      onClick={handlePlayFlames}
-                      className="p-1.5 rounded-lg border border-[#FFD7D7] bg-white text-[#D4A373] hover:text-[#E86B6B] transition-all flex items-center gap-1 px-2"
-                    >
-                      <Flame size={14} className="fill-current" />
-                      <span className="text-[9px] font-bold uppercase tracking-wider">FLAMES</span>
-                    </button>
-                    <button 
                       onClick={() => {
                         setGlobeMatches([selectedChatUser]);
                         setShowGlobe(true);
@@ -2736,77 +2684,7 @@ function App() {
                   )}
 
                   {/* Messages Area */}
-                  <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#FDFCF8] relative">
-                    {/* FLAMES Result Overlay */}
-                    <AnimatePresence>
-                      {flamesResult && (
-                        <motion.div 
-                          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                          className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-[#FDFCF8]/80 backdrop-blur-sm"
-                        >
-                          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-[#FFD7D7] p-8 w-full max-w-xs text-center space-y-6 relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E86B6B] via-[#D4A373] to-[#E86B6B]" />
-                            <button 
-                              onClick={() => setFlamesResult(null)}
-                              className="absolute top-4 right-4 text-[#8C8970] hover:text-[#E86B6B]"
-                            >
-                              <X size={20} />
-                            </button>
-
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-center gap-3">
-                                <div className="text-xs font-serif italic text-[#8C8970] truncate max-w-[80px]">{flamesResult.names[0]}</div>
-                                <div className="w-8 h-[1px] bg-[#FFD7D7]" />
-                                <div className="text-xs font-serif italic text-[#8C8970] truncate max-w-[80px]">{flamesResult.names[1]}</div>
-                              </div>
-                              
-                              <div className="relative">
-                                <motion.div 
-                                  animate={{ rotate: 360 }}
-                                  transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                                  className="absolute inset-0 flex items-center justify-center opacity-5"
-                                >
-                                  <Compass size={180} />
-                                </motion.div>
-                                
-                                <motion.div 
-                                  initial={{ scale: 0 }}
-                                  animate={{ scale: 1 }}
-                                  transition={{ type: 'spring', delay: 0.2 }}
-                                  className="text-7xl mb-2"
-                                >
-                                  {flamesResult.result.icon}
-                                </motion.div>
-                              </div>
-
-                              <div className="space-y-1">
-                                <h4 className="text-[10px] font-sans font-bold uppercase tracking-[0.3em] text-[#8C8970]">FLAMES Result</h4>
-                                <div 
-                                  className="text-3xl font-serif italic" 
-                                  style={{ color: flamesResult.result.color }}
-                                >
-                                  {flamesResult.result.label}
-                                </div>
-                              </div>
-
-                              <p className="text-[10px] text-[#8C8970] leading-relaxed italic">
-                                "{flamesResult.result.label === 'Soulmates' ? 'Perfect alignment across all stars.' : `According to the ancient art of FLAMES, your destiny is ${flamesResult.result.label}.`}"
-                              </p>
-                            </div>
-
-                            <button 
-                              onClick={() => setFlamesResult(null)}
-                              className="w-full py-4 bg-[#E86B6B] text-white rounded-full text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-[#E86B6B]/20"
-                            >
-                              Back to Chat
-                            </button>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
+                  <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#FDFCF8]">
                     {chatMessages.length === 0 ? (
                       <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-40">
                         <div className="w-20 h-20 bg-[#E86B6B]/5 rounded-full flex items-center justify-center">
