@@ -456,6 +456,8 @@ function App() {
         if (heading === lastHeadingRef.current) {
           if (Date.now() - lastHeadingTimeRef.current > 10000) {
             setSensorStatus('stuck');
+            // Auto-refresh attempt if stuck
+            setupOrientationListeners();
           }
         } else {
           setSensorStatus('active');
@@ -1239,11 +1241,26 @@ function App() {
     }
   }, [isDesktop, permissionGranted]);
 
+  // Compass Visibility Refresh & Persistence
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      // Re-setup listeners when tab becomes active to ensure fresh sensor data
+      if (document.visibilityState === 'visible' && permissionGranted) {
+        setupOrientationListeners();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [permissionGranted]);
+
   const setupOrientationListeners = () => {
     console.log("Setting up orientation listeners...");
+    // Always clean up first to avoid duplicates
+    window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
+    window.removeEventListener('deviceorientation', handleOrientation, true);
+    
     // Try absolute orientation first (Android/Chrome)
     window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-    
     // Fallback/Standard orientation (iOS/Safari)
     window.addEventListener('deviceorientation', handleOrientation, true);
     
@@ -1287,11 +1304,13 @@ function App() {
     }
 
     if (h !== null) {
-      // Apply correction: If North (0) shows as East (90), we subtract 90.
-      // iOS (webkitCompassHeading) is usually correct, so we don't offset it.
+      // Apply correction: 
+      // iOS (webkitCompassHeading) is absolute North, usually correct (0=N, 90=E).
+      // Android alpha (from deviceorientationabsolute) is usually 0 at North, but some browsers vary.
+      // We removed the -90 offset as it was causing inaccuracies for most standard mobile browsers.
       // @ts-ignore
       const isIOS = event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null;
-      const finalHeading = isIOS ? (h + 360) % 360 : (h - 90 + 360) % 360;
+      const finalHeading = (h + 360) % 360;
       setHeading(finalHeading);
       setSensorStatus(isAbsolute ? 'active' : 'relative');
       lastHeadingTimeRef.current = Date.now();
