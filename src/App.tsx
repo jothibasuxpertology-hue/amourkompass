@@ -572,11 +572,6 @@ function App() {
       if (loveMatch) {
         if (loveMatch.uid !== dismissedLoveMatchId) {
           setActiveLoveMatch(loveMatch);
-          // Automatically show globe for perfect matches if not already showing
-          if (!showGlobe) {
-            setGlobeMatches([loveMatch]);
-            setShowGlobe(true);
-          }
         }
       } else {
         setActiveLoveMatch(null);
