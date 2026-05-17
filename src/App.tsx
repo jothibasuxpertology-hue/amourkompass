@@ -244,18 +244,18 @@ const COUNTRIES = [
 ];
 
 const ZODIAC_COMPATIBILITY: { [key: string]: string[] } = {
-  'Aries': ['Leo', 'Sagittarius'],
-  'Taurus': ['Virgo', 'Capricorn'],
-  'Gemini': ['Libra', 'Aquarius'],
-  'Cancer': ['Scorpio', 'Pisces'],
-  'Leo': ['Aries', 'Sagittarius'],
-  'Virgo': ['Taurus', 'Capricorn'],
-  'Libra': ['Gemini', 'Aquarius'],
-  'Scorpio': ['Cancer', 'Pisces'],
-  'Sagittarius': ['Aries', 'Leo'],
-  'Capricorn': ['Taurus', 'Virgo'],
-  'Aquarius': ['Gemini', 'Libra'],
-  'Pisces': ['Cancer', 'Scorpio'],
+  'Aries': ['Leo', 'Sagittarius', 'Libra'],
+  'Taurus': ['Virgo', 'Capricorn', 'Scorpio'],
+  'Gemini': ['Libra', 'Aquarius', 'Sagittarius'],
+  'Cancer': ['Scorpio', 'Pisces', 'Capricorn'],
+  'Leo': ['Aries', 'Sagittarius', 'Aquarius'],
+  'Virgo': ['Taurus', 'Capricorn', 'Pisces'],
+  'Libra': ['Gemini', 'Aquarius', 'Aries'],
+  'Scorpio': ['Cancer', 'Pisces', 'Taurus'],
+  'Sagittarius': ['Aries', 'Leo', 'Gemini'],
+  'Capricorn': ['Taurus', 'Virgo', 'Cancer'],
+  'Aquarius': ['Gemini', 'Libra', 'Leo'],
+  'Pisces': ['Cancer', 'Scorpio', 'Virgo'],
 };
 
 import { PROFILE_PICS } from './profilePics';
