@@ -551,12 +551,19 @@ function App() {
         if (!isZodiacCompatible) return false;
 
         // Age-restricted matching logic:
-        // 1. Both must be 18 or above.
-        // 2. Allow up to 10 years gap.
+        // 1. 16-17 year olds match with 16-19 year olds.
+        // 2. 18+ year olds match with 18+ year olds within a 10-year gap.
         const myAge = userData.age || 0;
         const otherAge = m.age || 0;
-        const ageDiff = Math.abs(myAge - otherAge);
+        
+        if (myAge < 16 || otherAge < 16) return false;
 
+        // Symmetric check for 16-17 range
+        if (myAge >= 16 && myAge <= 17) return otherAge >= 16 && otherAge <= 19;
+        if (otherAge >= 16 && otherAge <= 17) return myAge >= 16 && myAge <= 19;
+
+        // Both are 18+
+        const ageDiff = Math.abs(myAge - otherAge);
         return ageDiff <= 10;
       });
       
@@ -1683,7 +1690,7 @@ function App() {
                   <div className="grid grid-cols-2 gap-3 sm:gap-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Age</label>
-                      <input required type="number" min="18" value={onboardingData.age} onChange={e => setOnboardingData({...onboardingData, age: parseInt(e.target.value)})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" />
+                      <input required type="number" min="16" value={onboardingData.age} onChange={e => setOnboardingData({...onboardingData, age: parseInt(e.target.value)})} className="w-full p-2 sm:p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7] rounded-xl text-sm" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Gender</label>
