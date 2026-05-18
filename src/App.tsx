@@ -286,7 +286,7 @@ function App() {
     const now = Date.now();
     const active = allUsers.filter(u => {
       const lastSeen = u.lastSeen?.toMillis ? u.lastSeen.toMillis() : 0;
-      return lastSeen > now - 600000; // 10 minutes
+      return lastSeen > now - 30000; // 30 seconds
     });
     return active.length + 1; // +1 for the current user
   }, [allUsers, pulse]);
@@ -535,9 +535,9 @@ function App() {
       const otherHeading = other.heading !== undefined ? other.heading : 0;
       if (!other.zodiac || !other.age) return false;
       
-      // Match people active in the last 15 minutes for a larger pool
+      // Match people active in the last 2 minutes for a reasonably fresh pool
       const lastSeen = other.lastSeen?.toMillis ? other.lastSeen.toMillis() : 0;
-      const isActive = lastSeen > Date.now() - 900000;
+      const isActive = lastSeen > Date.now() - 120000;
       if (!isActive) return false;
       
       // Opposite direction logic
@@ -2325,7 +2325,7 @@ function App() {
                                   {saved.name[0]}
                                 </div>
                               )}
-                              {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 300000 && (
+                              {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 120000 && (
                                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
                               )}
                             </div>
@@ -2383,7 +2383,7 @@ function App() {
                                   <Heart size={20} className="md:w-6 md:h-6" fill="currentColor" />
                                 </div>
                               )}
-                              {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 300000 && (
+                              {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 120000 && (
                                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
                               )}
                             </div>
@@ -2641,7 +2641,7 @@ function App() {
                           {selectedChatUser.name[0]}
                         </div>
                       )}
-                      {selectedChatUser.lastSeen?.toMillis && selectedChatUser.lastSeen.toMillis() > Date.now() - 300000 && (
+                      {selectedChatUser.lastSeen?.toMillis && selectedChatUser.lastSeen.toMillis() > Date.now() - 120000 && (
                         <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
                       )}
                     </div>
