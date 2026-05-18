@@ -276,7 +276,7 @@ function App() {
     const now = Date.now();
     const active = allUsers.filter(u => {
       const lastSeen = u.lastSeen?.toMillis ? u.lastSeen.toMillis() : 0;
-      return lastSeen > now - 300000; // 5 minutes
+      return lastSeen > now - 600000; // 10 minutes (generous for stability)
     });
     return active.length + 1; // +1 for the current user
   }, [allUsers]);
@@ -519,15 +519,20 @@ function App() {
     const threshold = 10; // Liberal 10 degree tolerance as requested
 
     const rawMatches = allUsers.filter(other => {
-      if (!other.heading || !other.zodiac || !other.age) return false;
+      // Treat heading as 0 if missing, but require zodiac and age
+      if (other.heading === undefined) other.heading = 0;
+      if (!other.zodiac || !other.age) return false;
       
-      // Only match people active in the last 5 minutes
+      // Only match people active in the last 10 minutes (be more generous)
       const lastSeen = other.lastSeen?.toMillis ? other.lastSeen.toMillis() : 0;
-      const isActive = lastSeen > Date.now() - 300000;
+      const isActive = lastSeen > Date.now() - 600000;
       if (!isActive) return false;
       
       // Only match people in the opposite direction (180 degrees offset)
-      const oppDir = Math.abs(oppositeDegree - other.heading) < threshold || Math.abs(oppositeDegree - other.heading) > (360 - threshold);
+      // Use 15 degree threshold for better discovery
+      const tolerance = 15;
+      const hDiff = Math.abs(oppositeDegree - other.heading);
+      const oppDir = hDiff < tolerance || hDiff > (360 - tolerance);
       return oppDir;
     });
 
@@ -535,39 +540,45 @@ function App() {
     const shuffled = [...rawMatches].sort(() => Math.random() - 0.5);
     
     // Potential Soulmates: Anyone in the compass direction
-    const limitedMatches = shuffled.slice(0, 6);
+    const limitedMatches = shuffled.slice(0, 10);
     setSoulmateMatches(limitedMatches);
 
     // Check for "Soulmate Found" (Active Love Match Popup)
-    // Rule: Zodiac match AND age difference <= 10 years
-    if (userData.lookingForLove) {
+    if (userData.lookingForLove !== false) {
       const loveMatches = shuffled.filter(m => {
-        if (!m.lookingForLove) return false;
+        // Treat lookingForLove as true by default for better discovery
+        if (m.lookingForLove === false) return false;
         
-        // Zodiac Matching Logic for Popup
+        // Zodiac Matching
         const myZodiac = userData.zodiac;
         const otherZodiac = m.zodiac;
         const isZodiacCompatible = ZODIAC_COMPATIBILITY[myZodiac]?.includes(otherZodiac);
         if (!isZodiacCompatible) return false;
 
-        // Age-restricted matching logic:
-        // 1. 16-17 year olds match with 16-19 year olds.
-        // 2. 18+ year olds match with 18+ year olds within a 10-year gap.
         const myAge = userData.age || 0;
         const otherAge = m.age || 0;
         
         if (myAge < 16 || otherAge < 16) return false;
 
-        // Symmetric check for 16-17 range
-        if (myAge >= 16 && myAge <= 17) return otherAge >= 16 && otherAge <= 19;
-        if (otherAge >= 16 && otherAge <= 17) return myAge >= 16 && myAge <= 19;
+        // Symmetric check for 16-17 range (match 16-19)
+        if ((myAge >= 16 && myAge <= 17) || (otherAge >= 16 && otherAge <= 17)) {
+            return (myAge >= 16 && myAge <= 19) && (otherAge >= 16 && otherAge <= 19);
+        }
 
         // Both are 18+
+        // Allowed 15 years gap if both are 18+ (interpreting "above 10 year difference" as permissive)
         const ageDiff = Math.abs(myAge - otherAge);
-        return ageDiff <= 10;
+        return ageDiff <= 15;
       });
       
-      const loveMatch = loveMatches.length > 0 ? loveMatches[0] : null;
+      // Pick a random match if there are multiple, but keep the current one if it's still alive
+      let loveMatch = loveMatches.length > 0 ? loveMatches[0] : null;
+      
+      // If our current active match is still valid, prefer keeping it to avoid flickering 
+      // unless it was already dismissed
+      if (activeLoveMatch && loveMatches.some(m => m.uid === activeLoveMatch.uid)) {
+          loveMatch = activeLoveMatch;
+      }
       
       if (loveMatch) {
         if (loveMatch.uid !== dismissedLoveMatchId) {
@@ -575,13 +586,11 @@ function App() {
         }
       } else {
         setActiveLoveMatch(null);
-        setDismissedLoveMatchId(null);
       }
     } else {
       setActiveLoveMatch(null);
-      setDismissedLoveMatchId(null);
     }
-  }, [heading, allUsers, userData, dismissedLoveMatchId]);
+  }, [heading, allUsers, userData, dismissedLoveMatchId, activeLoveMatch]);
 
   // Listen to User Data
   useEffect(() => {
@@ -806,8 +815,8 @@ function App() {
     e.preventDefault();
     if (!user) return;
     
-    if (onboardingData.age < 18) {
-      setNotification({ name: "Age Restricted", text: "If you are under 18, you can't enter.", uid: "system" });
+    if (onboardingData.age < 16) {
+      setNotification({ name: "Age Restricted", text: "If you are under 16, you can't enter.", uid: "system" });
       return;
     }
 

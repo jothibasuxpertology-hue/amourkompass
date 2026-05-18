@@ -90,7 +90,7 @@ service cloud.firestore {
              data.uid == request.auth.uid &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
              data.country is string && data.gender is string &&
-             data.age is number && data.age >= 18 && data.age <= 120 &&
+             data.age is number && data.age >= 16 && data.age <= 120 &&
              data.zodiac is string && data.targetCountry is string &&
              data.lastSeen is timestamp &&
              (data.get('username', null) == null || isValidUsername(data.username)) &&
