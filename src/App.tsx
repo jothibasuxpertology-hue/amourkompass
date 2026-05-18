@@ -272,14 +272,24 @@ function App() {
   // Friend State
   const [userData, setUserData] = useState<any>(null);
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [pulse, setPulse] = useState(0);
+
+  // Heartbeat for refreshing UI and rotating soulmates (8 seconds as requested)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPulse(p => p + 1);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
   const activeUsersCount = useMemo(() => {
     const now = Date.now();
     const active = allUsers.filter(u => {
       const lastSeen = u.lastSeen?.toMillis ? u.lastSeen.toMillis() : 0;
-      return lastSeen > now - 600000; // 10 minutes (generous for stability)
+      return lastSeen > now - 600000; // 10 minutes
     });
     return active.length + 1; // +1 for the current user
-  }, [allUsers]);
+  }, [allUsers, pulse]);
   const [soulmateMatches, setSoulmateMatches] = useState<any[]>([]);
   const [friendData, setFriendData] = useState<any>(null);
   const [friendIdInput, setFriendIdInput] = useState('');
@@ -317,7 +327,8 @@ function App() {
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
-  const isFullyAuthed = user && (user.isAnonymous || user.emailVerified);
+  // Broadened auth check: anyone with a user object can see soulmates
+  const isFullyAuthed = !!user;
   const lastHeadingRef = useRef(0);
   const lastHeadingTimeRef = useRef(Date.now());
 
@@ -511,78 +522,72 @@ function App() {
     return () => unsub();
   }, [user]);
 
-  // Matching Logic
+  // Matching Logic (Soulmate Discovery)
   useEffect(() => {
     if (!user || !userData) return;
 
     const oppositeDegree = (heading + 180) % 360;
-    const threshold = 10; // Liberal 10 degree tolerance as requested
+    // Increased tolerance to 20 degrees for easier mobile discovery
+    const tolerance = 20;
 
     const rawMatches = allUsers.filter(other => {
-      // Treat heading as 0 if missing, but require zodiac and age
-      if (other.heading === undefined) other.heading = 0;
+      // Treat heading as 0 if missing (common on mobile if not moving)
+      const otherHeading = other.heading !== undefined ? other.heading : 0;
       if (!other.zodiac || !other.age) return false;
       
-      // Only match people active in the last 10 minutes (be more generous)
+      // Match people active in the last 15 minutes for a larger pool
       const lastSeen = other.lastSeen?.toMillis ? other.lastSeen.toMillis() : 0;
-      const isActive = lastSeen > Date.now() - 600000;
+      const isActive = lastSeen > Date.now() - 900000;
       if (!isActive) return false;
       
-      // Only match people in the opposite direction (180 degrees offset)
-      // Use 15 degree threshold for better discovery
-      const tolerance = 15;
-      const hDiff = Math.abs(oppositeDegree - other.heading);
-      const oppDir = hDiff < tolerance || hDiff > (360 - tolerance);
-      return oppDir;
+      // Opposite direction logic
+      const hDiff = Math.abs(oppositeDegree - otherHeading);
+      const isOpposite = hDiff < tolerance || hDiff > (360 - tolerance);
+      return isOpposite;
     });
 
-    // Randomly shuffle matches to provide variety
-    const shuffled = [...rawMatches].sort(() => Math.random() - 0.5);
-    
-    // Potential Soulmates: Anyone in the compass direction
-    const limitedMatches = shuffled.slice(0, 10);
-    setSoulmateMatches(limitedMatches);
+    // Potential Soulmates: Pick max 5 randomly and shuffle on pulse
+    const pool = [...rawMatches].sort(() => Math.random() - 0.5);
+    setSoulmateMatches(pool.slice(0, 5));
 
-    // Check for "Soulmate Found" (Active Love Match Popup)
+    // Soulmate Found (Active Love Match Popup)
     if (userData.lookingForLove !== false) {
-      const loveMatches = shuffled.filter(m => {
-        // Treat lookingForLove as true by default for better discovery
+      const loveMatches = pool.filter(m => {
         if (m.lookingForLove === false) return false;
         
         // Zodiac Matching
         const myZodiac = userData.zodiac;
         const otherZodiac = m.zodiac;
-        const isZodiacCompatible = ZODIAC_COMPATIBILITY[myZodiac]?.includes(otherZodiac);
-        if (!isZodiacCompatible) return false;
+        const isCompatible = ZODIAC_COMPATIBILITY[myZodiac]?.includes(otherZodiac);
+        if (!isCompatible) return false;
 
         const myAge = userData.age || 0;
         const otherAge = m.age || 0;
         
         if (myAge < 16 || otherAge < 16) return false;
 
-        // Symmetric check for 16-17 range (match 16-19)
+        // Age gap logic (Permit 15 years gap for 18+)
         if ((myAge >= 16 && myAge <= 17) || (otherAge >= 16 && otherAge <= 17)) {
             return (myAge >= 16 && myAge <= 19) && (otherAge >= 16 && otherAge <= 19);
         }
-
-        // Both are 18+
-        // Allowed 15 years gap if both are 18+ (interpreting "above 10 year difference" as permissive)
-        const ageDiff = Math.abs(myAge - otherAge);
-        return ageDiff <= 15;
+        return Math.abs(myAge - otherAge) <= 15;
       });
       
-      // Pick a random match if there are multiple, but keep the current one if it's still alive
-      let loveMatch = loveMatches.length > 0 ? loveMatches[0] : null;
-      
-      // If our current active match is still valid, prefer keeping it to avoid flickering 
-      // unless it was already dismissed
-      if (activeLoveMatch && loveMatches.some(m => m.uid === activeLoveMatch.uid)) {
-          loveMatch = activeLoveMatch;
-      }
-      
-      if (loveMatch) {
+      // Rotate love match on pulse if multiple exist
+      if (loveMatches.length > 0) {
+        const index = pulse % loveMatches.length;
+        const loveMatch = loveMatches[index];
+        
         if (loveMatch.uid !== dismissedLoveMatchId) {
           setActiveLoveMatch(loveMatch);
+        } else {
+          // If the one we just picked was dismissed, try picking another one or just clear
+          const remaining = loveMatches.filter(m => m.uid !== dismissedLoveMatchId);
+          if (remaining.length > 0) {
+            setActiveLoveMatch(remaining[pulse % remaining.length]);
+          } else {
+            setActiveLoveMatch(null);
+          }
         }
       } else {
         setActiveLoveMatch(null);
@@ -590,7 +595,7 @@ function App() {
     } else {
       setActiveLoveMatch(null);
     }
-  }, [heading, allUsers, userData, dismissedLoveMatchId, activeLoveMatch]);
+  }, [heading, allUsers, userData, dismissedLoveMatchId, pulse]);
 
   // Listen to User Data
   useEffect(() => {
