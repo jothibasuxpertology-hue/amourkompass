@@ -274,11 +274,29 @@ function App() {
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [pulse, setPulse] = useState(0);
 
-  // Heartbeat for refreshing UI and rotating soulmates (8 seconds as requested)
+  // Sync references to prevent interval teardowns on fast compass mutations
+  const headingRef = useRef(0);
+  const locationRef = useRef<{ lat: number; lng: number } | null>(null);
+  const relationshipTypeRef = useRef<'friend' | 'love'>('love');
+  const userDataRef = useRef<any>(null);
+
+  useEffect(() => {
+    headingRef.current = heading;
+  }, [heading]);
+
+  useEffect(() => {
+    locationRef.current = location;
+  }, [location]);
+
+  useEffect(() => {
+    userDataRef.current = userData;
+  }, [userData]);
+
+  // Pulse every 5 seconds to instantly recalculate status indicators, active counts, and rotating matches
   useEffect(() => {
     const interval = setInterval(() => {
       setPulse(p => p + 1);
-    }, 8000);
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -286,7 +304,7 @@ function App() {
     const now = Date.now();
     const active = allUsers.filter(u => {
       const lastSeen = u.lastSeen?.toMillis ? u.lastSeen.toMillis() : 0;
-      return lastSeen > now - 30000; // 30 seconds
+      return lastSeen > now - 12000; // 12-second threshold matching our 5s heartbeat interval
     });
     return active.length + 1; // +1 for the current user
   }, [allUsers, pulse]);
@@ -299,6 +317,10 @@ function App() {
   const [connectError, setConnectError] = useState<string | null>(null);
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [relationshipType, setRelationshipType] = useState<'friend' | 'love'>('love');
+
+  useEffect(() => {
+    relationshipTypeRef.current = relationshipType;
+  }, [relationshipType]);
   const [isFacingEachOther, setIsFacingEachOther] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showGlobe, setShowGlobe] = useState(false);
@@ -485,29 +507,66 @@ function App() {
   }, [isDesktop, permissionGranted, heading]);
   const lastUpdateRef = useRef({ heading: -1, location: null as any, relationshipType: '' });
 
+  // Decoupled ultra-low-latency real-time heartbeat running every 5 seconds
   useEffect(() => {
-    if (!user || showOnboarding || showWelcome || !userData) return;
-    
-    // Update every 8 seconds as requested
+    if (!user || showOnboarding || showWelcome) return;
+
+    const performHeartbeatUpdate = (isOffline = false) => {
+      const uId = user.uid;
+      const lookingForLove = userDataRef.current?.lookingForLove ?? true;
+      const payload = {
+        heading: headingRef.current,
+        location: locationRef.current || null,
+        lastSeen: isOffline ? null : serverTimestamp(),
+        relationshipType: relationshipTypeRef.current,
+        lookingForLove
+      };
+      
+      updateDoc(doc(db, 'users', uId), payload)
+        .then(() => {
+          lastUpdateRef.current = { 
+            heading: headingRef.current, 
+            location: locationRef.current, 
+            relationshipType: relationshipTypeRef.current 
+          };
+        })
+        .catch(e => {
+          if (e.message?.includes('offline')) return;
+          handleFirestoreError(e, OperationType.UPDATE, `users/${uId}`);
+        });
+    };
+
+    // Instant initial online status update so there is zero startup delay
+    performHeartbeatUpdate(false);
+
+    // Highly responsive 5-second online state synchronization interval
     const interval = setInterval(() => {
-      updateDoc(doc(db, 'users', user.uid), {
-        heading,
-        location,
-        lastSeen: serverTimestamp(),
-        relationshipType,
-        lookingForLove: userData.lookingForLove ?? true
-      })
-      .then(() => {
-        lastUpdateRef.current = { heading, location, relationshipType };
-      })
-      .catch(e => {
-        if (e.message?.includes('offline')) return;
-        handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`);
-      });
-    }, 8000);
-    
-    return () => clearInterval(interval);
-  }, [user, heading, location, relationshipType, showOnboarding, showWelcome, userData]);
+      performHeartbeatUpdate(false);
+    }, 5000);
+
+    const handleUnloadOffline = () => {
+      performHeartbeatUpdate(true);
+    };
+
+    const handleVisibilityOffline = () => {
+      if (document.visibilityState === 'hidden') {
+        performHeartbeatUpdate(true);
+      } else {
+        performHeartbeatUpdate(false);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleUnloadOffline);
+    window.addEventListener('pagehide', handleUnloadOffline);
+    document.addEventListener('visibilitychange', handleVisibilityOffline);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', handleUnloadOffline);
+      window.removeEventListener('pagehide', handleUnloadOffline);
+      document.removeEventListener('visibilitychange', handleVisibilityOffline);
+    };
+  }, [user, showOnboarding, showWelcome]);
 
   // Listen to All Users
   useEffect(() => {
@@ -535,9 +594,9 @@ function App() {
       const otherHeading = other.heading !== undefined ? other.heading : 0;
       if (!other.zodiac || !other.age) return false;
       
-      // Match people active in the last 2 minutes for a reasonably fresh pool
+      // Match people active in the last 12 seconds for an ultra-fresh active-only pool
       const lastSeen = other.lastSeen?.toMillis ? other.lastSeen.toMillis() : 0;
-      const isActive = lastSeen > Date.now() - 120000;
+      const isActive = lastSeen > Date.now() - 12000;
       if (!isActive) return false;
       
       // Opposite direction logic
@@ -901,7 +960,16 @@ function App() {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (user) {
+      try {
+        await updateDoc(doc(db, 'users', user.uid), {
+          lastSeen: null
+        });
+      } catch (e) {
+        console.error("Error signing offline during logout:", e);
+      }
+    }
     auth.signOut();
     setUser(null);
     setUserData(null);
@@ -2325,7 +2393,7 @@ function App() {
                                   {saved.name[0]}
                                 </div>
                               )}
-                              {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 120000 && (
+                              {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 12000 && (
                                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
                               )}
                             </div>
@@ -2383,7 +2451,7 @@ function App() {
                                   <Heart size={20} className="md:w-6 md:h-6" fill="currentColor" />
                                 </div>
                               )}
-                              {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 120000 && (
+                              {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 12000 && (
                                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
                               )}
                             </div>
@@ -2641,7 +2709,7 @@ function App() {
                           {selectedChatUser.name[0]}
                         </div>
                       )}
-                      {selectedChatUser.lastSeen?.toMillis && selectedChatUser.lastSeen.toMillis() > Date.now() - 120000 && (
+                      {selectedChatUser.lastSeen?.toMillis && selectedChatUser.lastSeen.toMillis() > Date.now() - 12000 && (
                         <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
                       )}
                     </div>
