@@ -72,14 +72,21 @@ const ConnectionCard = ({
   cardRef: React.RefObject<HTMLDivElement>
 }) => {
   const isSoulmate = type === 'soulmate';
+  const num1 = getNumerologyDetail(user1?.name || '');
+  const num2 = getNumerologyDetail(user2?.name || '');
+  const sameGroup = num1.group === num2.group;
+  const isCompatibleZodiac = ZODIAC_COMPATIBILITY[user1?.zodiac]?.includes(user2?.zodiac) || ZODIAC_COMPATIBILITY[user2?.zodiac]?.includes(user1?.zodiac);
+  const isPerfectSoulmate = isSoulmate && sameGroup && isCompatibleZodiac;
   
   return (
     <div 
       ref={cardRef}
       className={`w-[320px] h-[480px] p-8 relative overflow-hidden flex flex-col items-center justify-between text-center ${
-        isSoulmate 
-          ? 'bg-gradient-to-br from-[#FFF5F5] via-white to-[#FFE4E4]' 
-          : 'bg-gradient-to-br from-[#FDFCF8] via-white to-[#F5F5F0]'
+        isPerfectSoulmate
+          ? 'bg-gradient-to-br from-[#FFF0F0] via-white to-[#FFE8D6] border-2 border-[#D4A373]'
+          : isSoulmate 
+            ? 'bg-gradient-to-br from-[#FFF5F5] via-white to-[#FFE4E4]' 
+            : 'bg-gradient-to-br from-[#FDFCF8] via-white to-[#F5F5F0]'
       }`}
       style={{ borderRadius: '40px' }}
     >
@@ -92,59 +99,77 @@ const ConnectionCard = ({
 
       <div className="z-10 space-y-2">
         <div className="flex items-center justify-center gap-2 mb-4">
-          <Compass size={20} className="text-[#D4A373]" />
-          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#8C8970]">Amour Compass</span>
+          <Compass size={18} className="text-[#D4A373]" />
+          <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-[#8C8970]">Amour Compass</span>
         </div>
-        <h2 className={`text-3xl font-serif ${isSoulmate ? 'text-[#E86B6B]' : 'text-[#D4A373]'}`}>
-          {isSoulmate ? 'Soulmate Bond' : 'Eternal Friendship'}
+        <h2 className={`text-2xl font-serif ${isPerfectSoulmate ? 'bg-gradient-to-r from-[#E86B6B] to-[#D4A373] bg-clip-text text-transparent font-extrabold' : isSoulmate ? 'text-[#E86B6B]' : 'text-[#D4A373]'}`}>
+          {isPerfectSoulmate ? 'Perfect Soulmate' : isSoulmate ? 'Soulmate Bond' : 'Eternal Friendship'}
         </h2>
-        <p className="text-[10px] text-[#8C8970] italic">A connection written in the stars</p>
+        <p className="text-[10px] text-[#8C8970] italic leading-tight">
+          {isPerfectSoulmate ? 'An ultimate Numerology & Zodiac match' : 'A connection written in the stars'}
+        </p>
       </div>
 
-      <div className="z-10 flex items-center justify-center gap-4 w-full">
-        <div className="flex flex-col items-center gap-2">
+      <div className="z-10 flex items-center justify-center gap-2 w-full my-1">
+        <div className="flex flex-col items-center gap-1.5 w-[100px]">
           {user1.profilePic ? (
-            <img src={user1.profilePic} alt={user1.name} className="w-16 h-16 rounded-2xl object-cover shadow-md border border-[#FFD7D7]" referrerPolicy="no-referrer" />
+            <img src={user1.profilePic} alt={user1.name} className="w-14 h-14 rounded-2xl object-cover shadow-md border border-[#FFD7D7]" referrerPolicy="no-referrer" />
           ) : (
-            <div className="w-16 h-16 bg-white rounded-2xl shadow-md border border-[#FFD7D7] flex items-center justify-center text-2xl font-serif italic text-[#E86B6B]">
-              {user1.name[0]}
+            <div className="w-14 h-14 bg-white rounded-2xl shadow-md border border-[#FFD7D7] flex items-center justify-center text-xl font-serif italic text-[#E86B6B]">
+              {user1.name?.[0] || '?'}
             </div>
           )}
-          <span className="text-xs font-bold text-[#4A4A3A]">{user1.name}</span>
-          <span className="text-[8px] uppercase tracking-widest text-[#8C8970]">{user1.zodiac}</span>
+          <span className="text-[11px] font-bold text-[#4A4A3A] truncate w-full">{user1.name}</span>
+          <span className="text-[8px] uppercase tracking-wider text-[#8C8970] truncate w-full leading-none">{user1.zodiac}</span>
+          <span className="text-[7px] font-serif italic text-[#D4A373] bg-[#FDFCF8] px-1 py-0.5 rounded border border-[#FFD7D7]/30 mt-0.5 w-full truncate leading-none">
+            Num {num1.number} ({num1.title})
+          </span>
         </div>
 
-        <div className="flex flex-col items-center">
-          {isSoulmate ? (
-            <Heart size={24} className="text-[#E86B6B] animate-pulse" fill="#E86B6B" />
+        <div className="flex flex-col items-center flex-1">
+          {isPerfectSoulmate ? (
+            <div className="flex flex-col items-center">
+              <Sparkles size={18} className="text-amber-500 animate-pulse" />
+              <Heart size={16} className="text-[#E86B6B] -mt-1 animate-pulse" fill="#E86B6B" />
+            </div>
+          ) : isSoulmate ? (
+            <Heart size={20} className="text-[#E86B6B] animate-pulse" fill="#E86B6B" />
           ) : (
-            <Sparkles size={24} className="text-[#D4A373]" />
+            <Sparkles size={20} className="text-[#D4A373]" />
           )}
-          <div className="h-12 w-[1px] bg-gradient-to-b from-transparent via-[#FFD7D7] to-transparent my-2" />
+          <div className="h-8 w-[1px] bg-gradient-to-b from-transparent via-[#FFD7D7] to-transparent my-1" />
+          <span className="text-[7px] font-mono font-bold uppercase tracking-widest text-[#E86B6B] leading-none text-center">
+            {sameGroup ? 'Harmony' : 'Aligned'}
+          </span>
         </div>
 
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-1.5 w-[100px]">
           {user2.profilePic ? (
-            <img src={user2.profilePic} alt={user2.name} className="w-16 h-16 rounded-2xl object-cover shadow-md border border-[#FFD7D7]" referrerPolicy="no-referrer" />
+            <img src={user2.profilePic} alt={user2.name} className="w-14 h-14 rounded-2xl object-cover shadow-md border border-[#FFD7D7]" referrerPolicy="no-referrer" />
           ) : (
-            <div className="w-16 h-16 bg-white rounded-2xl shadow-md border border-[#FFD7D7] flex items-center justify-center text-2xl font-serif italic text-[#E86B6B]">
-              {user2.name[0]}
+            <div className="w-14 h-14 bg-white rounded-2xl shadow-md border border-[#FFD7D7] flex items-center justify-center text-xl font-serif italic text-[#E86B6B]">
+              {user2.name?.[0] || '?'}
             </div>
           )}
-          <span className="text-xs font-bold text-[#4A4A3A]">{user2.name}</span>
-          <span className="text-[8px] uppercase tracking-widest text-[#8C8970]">{user2.zodiac}</span>
+          <span className="text-[11px] font-bold text-[#4A4A3A] truncate w-full">{user2.name}</span>
+          <span className="text-[8px] uppercase tracking-wider text-[#8C8970] truncate w-full leading-none">{user2.zodiac}</span>
+          <span className="text-[7px] font-serif italic text-[#D4A373] bg-[#FDFCF8] px-1 py-0.5 rounded border border-[#FFD7D7]/30 mt-0.5 w-full truncate leading-none">
+            Num {num2.number} ({num2.title})
+          </span>
         </div>
       </div>
 
-      <div className="z-10 w-full space-y-4">
-        <div className="p-4 bg-white/50 backdrop-blur-sm rounded-2xl border border-[#FFD7D7] shadow-sm">
-          <p className="text-[10px] leading-relaxed text-[#4A4A3A] italic">
-            {isSoulmate 
-              ? "Destiny brought them together through the Amour Compass. A bond forged in the stars and guided by the heart."
-              : "A friendship that transcends boundaries. Two souls connected by shared moments and mutual understanding."}
+      <div className="z-10 w-full space-y-3">
+        <div className="p-3 bg-white/50 backdrop-blur-sm rounded-2xl border border-[#FFD7D7] shadow-xs">
+          <p className="text-[9px] leading-relaxed text-[#4A4A3A] italic">
+            {isPerfectSoulmate
+              ? `Astrological harmony aligned with name numerology Group ${num1.group}. ${user1.name} & ${user2.name} share a rare resonance of mutual destiny.`
+              : isSoulmate 
+                ? `Destiny brought them together through the Amour Compass. A bond forged in the stars and guided by the heart.`
+                : `A friendship that transcends boundaries. Two souls connected by shared moments and mutual understanding.`}
           </p>
         </div>
-        <div className="text-[8px] text-[#8C8970] font-bold uppercase tracking-widest">
+        <div className="text-[7px] text-[#8C8970] font-bold uppercase tracking-widest leading-none">
           Verified Connection • {new Date().toLocaleDateString()}
         </div>
       </div>
@@ -258,6 +283,100 @@ const ZODIAC_COMPATIBILITY: { [key: string]: string[] } = {
   'Pisces': ['Cancer', 'Scorpio', 'Virgo'],
 };
 
+// --- Name Letter Numerology Configuration & Calculation ---
+const PYTHAGOREAN_VALUES: { [key: string]: number } = {
+  A: 1, J: 1, S: 1,
+  B: 2, K: 2, T: 2,
+  C: 3, L: 3, U: 3,
+  D: 4, M: 4, V: 4,
+  E: 5, N: 5, W: 5,
+  F: 6, O: 6, X: 6,
+  G: 7, P: 7, Y: 7,
+  H: 8, Q: 8, Z: 8,
+  I: 9, R: 9
+};
+
+const NUMEROLOGY_MEANINGS: { [key: number]: { title: string; desc: string; group: string } } = {
+  1: { title: "The Leader", desc: "Independent, ambitious, pioneering, and strong-willed.", group: "1-5-7" },
+  2: { title: "The Peacemaker", desc: "Cooperative, sensitive, harmonious, and diplomatic.", group: "2-4-8" },
+  3: { title: "The Creator", desc: "Expressive, imaginative, joyful, and highly communicative.", group: "3-6-9" },
+  4: { title: "The Builder", desc: "Practical, disciplined, stable, methodical, and reliable.", group: "2-4-8" },
+  5: { title: "The Explorer", desc: "Adventuresome, adaptable, freedom-loving, and dynamic.", group: "1-5-7" },
+  6: { title: "The Nurturer", desc: "Responsible, loving, compassionate, and family-oriented.", group: "3-6-9" },
+  7: { title: "The Seeker", desc: "Analytical, spiritual, intellectual, and quiet thinker.", group: "1-5-7" },
+  8: { title: "The Achiever", desc: "Ambitious, successful, realistic, and highly competent.", group: "2-4-8" },
+  9: { title: "The Philosopher", desc: "Humanitarian, generous, compassionate, and highly idealistic.", group: "3-6-9" }
+};
+
+interface NumerologyResult {
+  number: number;
+  letterSum: number;
+  lettersList: { letter: string; value: number }[];
+  sumString: string;
+  title: string;
+  desc: string;
+  group: string;
+}
+
+function getNumerologyDetail(name: string): NumerologyResult {
+  if (!name || typeof name !== 'string') {
+    return {
+      number: 1,
+      letterSum: 0,
+      lettersList: [],
+      sumString: "",
+      title: "The Leader",
+      desc: "Independent and pioneering.",
+      group: "1-5-7"
+    };
+  }
+
+  const cleaned = name.toUpperCase().replace(/[^A-Z]/g, '');
+  const lettersList: { letter: string; value: number }[] = [];
+  let letterSum = 0;
+
+  for (let i = 0; i < cleaned.length; i++) {
+    const letter = cleaned[i];
+    const val = PYTHAGOREAN_VALUES[letter] || 0;
+    if (val > 0) {
+      lettersList.push({ letter, value: val });
+      letterSum += val;
+    }
+  }
+
+  // Reduce to single digit
+  let tempSum = letterSum;
+  const reductionSteps: number[] = [tempSum];
+  while (tempSum > 9) {
+    let subSum = 0;
+    const str = tempSum.toString();
+    for (let j = 0; j < str.length; j++) {
+      subSum += parseInt(str[j], 10);
+    }
+    tempSum = subSum;
+    reductionSteps.push(tempSum);
+  }
+
+  const num = tempSum || 1;
+  const meaning = NUMEROLOGY_MEANINGS[num] || { title: "The Leader", desc: "Independent and pioneering.", group: "1-5-7" };
+
+  // Generate nice equation string, e.g. "J(1) + O(6) + T(2) + H(8) + I(9) = 26 -> 8"
+  const sumFormula = lettersList.map(item => `${item.letter}(${item.value})`).join(' + ');
+  const sumString = lettersList.length > 0 
+    ? `${sumFormula} = ${letterSum}${reductionSteps.length > 1 ? ' → ' + reductionSteps.slice(1).join(' → ') : ''}`
+    : "No letters";
+
+  return {
+    number: num,
+    letterSum,
+    lettersList,
+    sumString,
+    title: meaning.title,
+    desc: meaning.desc,
+    group: meaning.group
+  };
+}
+
 import { PROFILE_PICS } from './profilePics';
 
 function App() {
@@ -330,6 +449,7 @@ function App() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [activeTab, setActiveTab] = useState<'compass' | 'messages' | 'friends' | 'saved'>('compass');
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
+  const [showNumerologyDetail, setShowNumerologyDetail] = useState(false);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatError, setChatError] = useState<string | null>(null);
@@ -1709,9 +1829,16 @@ function App() {
                       )}
                     </div>
                     <div className="space-y-1 w-full text-center">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Your Display Name</label>
+                      <div className="flex justify-between items-center px-1">
+                        <span className="w-4"></span>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Your Display Name</label>
+                        <span className="text-[8px] font-mono text-[#8C8970]/80 w-4 text-right">
+                          {onboardingData.name.length}/20
+                        </span>
+                      </div>
                       <input 
                         required 
+                        maxLength={20}
                         placeholder="What should we call you?"
                         value={onboardingData.name} 
                         onChange={e => setOnboardingData({...onboardingData, name: e.target.value})} 
@@ -1719,9 +1846,16 @@ function App() {
                       />
                     </div>
                     <div className="space-y-1 w-full text-center">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Your Vibe & Bio</label>
+                      <div className="flex justify-between items-center px-1">
+                        <span className="w-4"></span>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-[#8C8970]">Your Vibe & Bio</label>
+                        <span className="text-[8px] font-mono text-[#8C8970]/80 w-4 text-right">
+                          {onboardingData.bio.length}/160
+                        </span>
+                      </div>
                       <textarea 
                         required 
+                        maxLength={160}
                         placeholder="Tell the stars about yourself..."
                         value={onboardingData.bio} 
                         onChange={e => setOnboardingData({...onboardingData, bio: e.target.value})} 
@@ -2198,11 +2332,25 @@ function App() {
                               <div className="min-w-0 flex-1">
                                 <div className="text-sm font-bold text-[#4A4A3A] truncate group-hover:text-[#E86B6B] transition-colors">{match.name}, {match.age}</div>
                                 <div className="text-[10px] text-[#8C8970] font-sans uppercase tracking-widest truncate">{match.zodiac} • {match.country}</div>
+                                {match.name && (
+                                  <div className="text-[9px] text-[#D4A373] font-serif italic leading-tight mt-0.5">
+                                    Numerology {getNumerologyDetail(match.name).number} ({getNumerologyDetail(match.name).title})
+                                  </div>
+                                )}
                                 {(() => {
                                   const isZodiacCompatible = ZODIAC_COMPATIBILITY[userData?.zodiac || '']?.includes(match.zodiac);
                                   const ageDiff = Math.abs((userData?.age || 0) - (match.age || 0));
+                                  const myNumDetail = getNumerologyDetail(userData?.name || '');
+                                  const matchNumDetail = getNumerologyDetail(match.name || '');
+                                  const isNumerologyCompatible = myNumDetail.group === matchNumDetail.group;
                                   
-                                  if (isZodiacCompatible && ageDiff <= 10) {
+                                  if (isZodiacCompatible && ageDiff <= 10 && isNumerologyCompatible) {
+                                    return (
+                                      <div className="mt-1 inline-flex items-center gap-1 px-2.5 py-0.5 bg-gradient-to-r from-[#E86B6B] to-[#D4A373] text-white text-[8px] font-bold uppercase tracking-widest rounded-full shadow-xs">
+                                        <Sparkles size={8} className="shrink-0 animate-pulse" /> Perfect Soulmate
+                                      </div>
+                                    );
+                                  } else if (isZodiacCompatible && ageDiff <= 10) {
                                     return <div className="mt-1 inline-block px-2 py-0.5 bg-emerald-100 text-emerald-600 text-[8px] font-bold uppercase tracking-widest rounded-full">Soulmate</div>;
                                   } else if (isZodiacCompatible) {
                                     return <div className="mt-1 inline-block px-2 py-0.5 bg-amber-100 text-amber-600 text-[8px] font-bold uppercase tracking-widest rounded-full">Potential Soulmate</div>;
@@ -2580,6 +2728,43 @@ function App() {
                       </div>
                     </div>
 
+                    {userData?.name && (
+                      <div className="p-5 bg-[#FDFCF8] border border-[#D4A373]/20 rounded-[2rem] space-y-3 shadow-xs">
+                        <div className="flex items-center gap-2">
+                          <Sparkles size={14} className="text-[#D4A373]" />
+                          <h4 className="text-[10px] font-sans font-bold uppercase tracking-widest text-[#8C8970]">
+                            Your Name Numerology
+                          </h4>
+                        </div>
+                        {(() => {
+                          const numInfo = getNumerologyDetail(userData.name);
+                          return (
+                            <div className="space-y-2">
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-3xl font-serif text-[#D4A373]">{numInfo.number}</span>
+                                <span className="text-xs font-bold text-[#4A4A3A]">{numInfo.title}</span>
+                              </div>
+                              <p className="text-[10px] text-[#8C8970] leading-normal">{numInfo.desc}</p>
+                              
+                              <div className="pt-2 border-t border-[#FFD7D7]/30 space-y-1.5">
+                                <div className="flex justify-between items-center text-[8px] font-bold uppercase tracking-wider">
+                                  <span className="text-[#8C8970]">Pythagorean Sum</span>
+                                  <span className="text-[#4A4A3A] font-mono">{numInfo.letterSum}</span>
+                                </div>
+                                <div className="text-[8px] font-mono text-[#8C8970] bg-white/60 p-2 rounded-lg border border-[#FFD7D7]/20 break-words">
+                                  {numInfo.sumString}
+                                </div>
+                                <div className="flex justify-between items-center text-[8px] font-bold uppercase tracking-wider pt-1">
+                                  <span className="text-[#8C8970]">Harmonic Group</span>
+                                  <span className="px-1.5 py-0.5 bg-[#FFF5F5] border border-[#FFD7D7] text-[#E86B6B] rounded-md font-mono">{numInfo.group}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <label className="text-[10px] font-sans font-bold uppercase tracking-widest text-[#8C8970]">Love Mode</label>
                       <button 
@@ -2747,6 +2932,91 @@ function App() {
                     </button>
                   </div>
                 </div>
+
+                {/* Numerology Alignment Analysis Collapsible Banner */}
+                {(() => {
+                  const myNum = getNumerologyDetail(userData?.name || '');
+                  const otherNum = getNumerologyDetail(selectedChatUser.name || '');
+                  const isCompatibleZodiac = ZODIAC_COMPATIBILITY[userData?.zodiac || '']?.includes(selectedChatUser.zodiac) || ZODIAC_COMPATIBILITY[selectedChatUser.zodiac]?.includes(userData?.zodiac || '');
+                  const ageDiff = Math.abs((userData?.age || 0) - (selectedChatUser.age || 0));
+                  const sameGroup = myNum.group === otherNum.group;
+                  const isPerfect = isCompatibleZodiac && ageDiff <= 10 && sameGroup;
+                  const isSoulmate = isCompatibleZodiac && ageDiff <= 10;
+                  
+                  return (
+                    <div className="bg-[#FFFDF9] border-b border-[#FFD7D7] px-6 py-3.5 space-y-2 shrink-0">
+                      <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowNumerologyDetail(!showNumerologyDetail)}>
+                        <div className="flex items-center gap-2">
+                          {isPerfect ? (
+                            <span className="flex items-center gap-1 px-2.5 py-0.5 bg-gradient-to-r from-[#E86B6B] to-[#D4A373] text-white text-[8px] font-bold uppercase tracking-wider rounded-full shadow-xs animate-pulse">
+                              <Sparkles size={8} /> Perfect Soulmate
+                            </span>
+                          ) : isSoulmate ? (
+                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 text-[8px] font-bold uppercase tracking-wider rounded-full">
+                              Soulmate Match
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-[#FFF5F5] text-[#E86B6B] text-[8px] font-bold uppercase tracking-wider rounded-full">
+                              Alignment Analysis
+                            </span>
+                          )}
+                          <span className="text-[10px] font-medium text-[#4A4A3A]">
+                            Numerology Harmony: {sameGroup ? 'High Compatibility' : 'Dynamic Balance'}
+                          </span>
+                        </div>
+                        <span className="text-[9px] text-[#E86B6B] font-bold uppercase tracking-widest hover:underline">
+                          {showNumerologyDetail ? 'Hide details' : 'Show details'}
+                        </span>
+                      </div>
+
+                      {showNumerologyDetail && (
+                        <motion.div 
+                          initial={{ opacity: 0, height: 0 }} 
+                          animate={{ opacity: 1, height: 'auto' }} 
+                          className="pt-2.5 pb-1 space-y-3.5 border-t border-[#FFD7D7]/30 text-xs text-[#8C8970]"
+                        >
+                          {/* User 1 Numerology */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="p-3 bg-white border border-[#FFD7D7]/40 rounded-2xl space-y-1">
+                              <div className="text-[8px] font-bold uppercase tracking-wider text-[#4A4A3A] truncate">
+                                {userData?.name || 'You'} (Num {myNum.number})
+                              </div>
+                              <div className="text-[11px] font-serif text-[#D4A373] italic truncate">{myNum.title}</div>
+                              <div className="text-[8px] font-mono leading-none break-all text-[#8C8970] pt-1">
+                                {myNum.sumString}
+                              </div>
+                            </div>
+
+                            {/* User 2 Numerology */}
+                            <div className="p-3 bg-white border border-[#FFD7D7]/40 rounded-2xl space-y-1">
+                              <div className="text-[8px] font-bold uppercase tracking-wider text-[#4A4A3A] truncate">
+                                {selectedChatUser.name} (Num {otherNum.number})
+                              </div>
+                              <div className="text-[11px] font-serif text-[#D4A373] italic truncate">{otherNum.title}</div>
+                              <div className="text-[8px] font-mono leading-none break-all text-[#8C8970] pt-1">
+                                {otherNum.sumString}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="p-3 bg-[#FFF5F5]/30 border border-[#FFD7D7]/30 rounded-2xl space-y-2">
+                            <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest">
+                              <span className="text-[#8C8970]">Harmonic Balance</span>
+                              <span className={`px-2 py-0.5 rounded-md font-mono ${sameGroup ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
+                                {sameGroup ? `Matched Group ${myNum.group}` : `Groups ${myNum.group} & ${otherNum.group}`}
+                              </span>
+                            </div>
+                            <p className="text-[10px] leading-relaxed text-[#4A4A3A] italic">
+                              {sameGroup 
+                                ? "Your names vibrate in identical harmonic numbers! This indicates an effortless mental connection and seamless empathy." 
+                                : "Your different harmonic groupings form a complementary balance. This brings a dynamic, adventurous spirit where each partner completes what the other lacks."}
+                            </p>
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+                  );
+                })()}
                 
 
                   {/* Potential Soulmates Section */}
