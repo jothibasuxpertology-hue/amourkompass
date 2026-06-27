@@ -2635,6 +2635,17 @@ function App() {
                         Sign Out
                       </button>
                     </div>
+
+                    <div className="pt-4 border-t border-[#FFD7D7]/30 text-center space-y-1">
+                      <div className="text-[8px] font-sans font-bold uppercase tracking-[0.25em] text-[#8C8970]">
+                        Created by
+                      </div>
+                      <div className="text-[11px] font-serif italic text-[#D4A373] flex justify-center items-center gap-2">
+                        <span>Harivignesh</span>
+                        <span className="text-[#E86B6B] not-italic">•</span>
+                        <span>Jothibasu</span>
+                      </div>
+                    </div>
                   </div>
                   </div>
                 </motion.div>
