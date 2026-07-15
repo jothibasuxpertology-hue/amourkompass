@@ -625,7 +625,7 @@ function App() {
       clearInterval(healthCheck);
     };
   }, [isDesktop, permissionGranted, heading]);
-  const lastUpdateRef = useRef({ heading: -1, location: null as any, relationshipType: '' });
+  const lastUpdateRef = useRef({ heading: -1, location: null as any, relationshipType: '', time: 0 });
 
   // Decoupled ultra-low-latency real-time heartbeat running every 5 seconds
   useEffect(() => {
@@ -634,6 +634,19 @@ function App() {
     const performHeartbeatUpdate = (isOffline = false) => {
       const uId = user.uid;
       const lookingForLove = userDataRef.current?.lookingForLove ?? true;
+      
+      // OPTIMIZATION: Only update if there's a significant change or 60 seconds have passed to reduce cost
+      let hDiff = Math.abs(headingRef.current - lastUpdateRef.current.heading);
+      if (hDiff > 180) hDiff = 360 - hDiff;
+      const hChanged = hDiff >= 5; // 5 degrees change threshold
+      const lChanged = JSON.stringify(locationRef.current) !== JSON.stringify(lastUpdateRef.current.location);
+      const rChanged = relationshipTypeRef.current !== lastUpdateRef.current.relationshipType;
+      const timeSinceLastUpdate = Date.now() - lastUpdateRef.current.time;
+      
+      if (!isOffline && !hChanged && !lChanged && !rChanged && timeSinceLastUpdate < 60000) {
+        return; // Skip update to save Firestore writes
+      }
+
       const payload = {
         heading: headingRef.current,
         location: locationRef.current || null,
@@ -647,7 +660,8 @@ function App() {
           lastUpdateRef.current = { 
             heading: headingRef.current, 
             location: locationRef.current, 
-            relationshipType: relationshipTypeRef.current 
+            relationshipType: relationshipTypeRef.current,
+            time: Date.now()
           };
         })
         .catch(e => {
@@ -714,9 +728,9 @@ function App() {
       const otherHeading = other.heading !== undefined ? other.heading : 0;
       if (!other.zodiac || !other.age) return false;
       
-      // Match people active in the last 12 seconds for an ultra-fresh active-only pool
+      // Match people active in the last 70 seconds for an ultra-fresh active-only pool
       const lastSeen = other.lastSeen?.toMillis ? other.lastSeen.toMillis() : 0;
-      const isActive = lastSeen > Date.now() - 12000;
+      const isActive = lastSeen > Date.now() - 70000;
       if (!isActive) return false;
       
       // Opposite direction logic
