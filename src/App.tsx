@@ -5,7 +5,7 @@ import { toPng } from 'html-to-image';
 import { auth, db } from './firebase';
 import SoulmateGlobe from './components/SoulmateGlobe';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User as FirebaseUser, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
-import { doc, Timestamp, setDoc, getDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, updateDoc, addDoc, orderBy, limit } from './cloudflare-firestore-shim';
+import { doc, Timestamp, setDoc, getDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, updateDoc, addDoc, orderBy, limit } from 'firebase/firestore';
 
 // Firestore Error Handling
 enum OperationType {
