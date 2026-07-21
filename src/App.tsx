@@ -5,7 +5,7 @@ import { toPng } from 'html-to-image';
 import { auth, db } from './firebase';
 import SoulmateGlobe from './components/SoulmateGlobe';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User as FirebaseUser, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
-import { doc, setDoc, getDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, updateDoc, addDoc, orderBy, limit } from 'firebase/firestore';
+import { doc, Timestamp, setDoc, getDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, updateDoc, addDoc, orderBy, limit } from './cloudflare-firestore-shim';
 
 // Firestore Error Handling
 enum OperationType {
@@ -423,7 +423,7 @@ function App() {
     const now = Date.now();
     const active = allUsers.filter(u => {
       const lastSeen = u.lastSeen?.toMillis ? u.lastSeen.toMillis() : 0;
-      return lastSeen > now - 12000; // 12-second threshold matching our 5s heartbeat interval
+      return lastSeen > now - 70000; // 70-second threshold matching our 60s max heartbeat interval
     });
     return active.length + 1; // +1 for the current user
   }, [allUsers, pulse]);
@@ -705,7 +705,9 @@ function App() {
   // Listen to All Users
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, 'users'));
+    // Only fetch users active in the last hour to drastically reduce initial read costs
+    const oneHourAgo = Timestamp.fromMillis(Date.now() - 60 * 60 * 1000);
+    const q = query(collection(db, 'users'), where('lastSeen', '>=', oneHourAgo));
     const unsub = onSnapshot(q, (snap) => {
       const users = snap.docs
         .map(d => d.data())
@@ -1115,17 +1117,7 @@ function App() {
 
   // Connection Test
   useEffect(() => {
-    const testConnection = async () => {
-      try {
-        const { getDocFromServer } = await import('firebase/firestore');
-        await getDocFromServer(doc(db, 'users', 'connection-test'));
-      } catch (error: any) {
-        if (error.message?.includes('offline')) {
-          console.error("Please check your Firebase configuration. The client is offline.");
-        }
-      }
-    };
-    testConnection();
+    // Cloudflare D1 connection is tested server-side
   }, []);
 
   const connectFriend = async () => {
@@ -1604,19 +1596,19 @@ function App() {
 
             <div className="bg-white/50 backdrop-blur-md p-6 rounded-[2rem] border border-white shadow-xl space-y-4">
               {authMethod === 'welcome' ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <motion.button 
                     whileTap={{ scale: 0.98 }}
                     onClick={handleLogin}
                     disabled={isAuthLoading}
-                    className="w-full py-4 bg-white border-2 border-[#FFD7D7] text-[#4A4A3A] rounded-2xl flex items-center justify-center gap-3 font-sans font-bold tracking-widest uppercase text-[10px] hover:border-[#E86B6B] transition-all shadow-sm"
+                    className="w-full py-5 bg-white border-2 border-[#FFD7D7] text-[#4A4A3A] rounded-2xl flex items-center justify-center gap-3 font-sans font-bold tracking-widest uppercase text-xs hover:border-[#E86B6B] transition-all shadow-md"
                   >
                     <img 
                       src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCIgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4Ij48cGF0aCBmaWxsPSIjRUE0MzM1IiBkPSJNMjQgOS41YzMuNTQgMCA2LjczIDEuMjIgOS4yMyAzLjU4bDYuOTEtNi45MUMzNS40MyAyLjQ3IDMwLjI0IDAgMjQgMEMxNC45OSAwIDcuNDEgNS43IDQuNTQgMTMuOTdsNy40NyA1LjgxQzEzLjg3IDEyLjMzIDE4LjQ3IDkuNSAyNCA5LjV6Ii8+PHBhdGggZmlsbD0iIzQyODVGNCIgZD0iTTQ2Ljk4IDI0LjU1YzAgLTEuNjEtLjE0LTMuMTctLjM5LTQuNTVIMjR2OS4wMmgxMi45NGMtLjU2IDIuOTYtMi4yNiA1LjQ4LTQuNzcgNy4xOGw3LjQ3IDUuODFjNC4zOC00LjA1IDYuOTItNC4wNSA2LjkyLTE3LjQ2eiIvPjxwYXRoIGZpbGw9IiNGQkJDMDQiIGQ9Ik0xMC41MyAyOC41OWMtLjQ4LTEuNDEtLjc2LTIuOTEtLjc2LTQuNDVzLjI4LTMuMDQuNzYtNC40NWwtNy40Ny01LjgxQy42NCAxNy45MSAwIDIwLjkxIDAgMjRzLjY0IDYuMDkgMi4zMiA5LjIybDcuNTYtNS42MnoiLz48cGF0aCBmaWxsPSIjMzRBODUzIiBkPSJNMjQgNDhjNi40OCAwIDExLjkzLTIuMTMgMTUuODktNS44MWwtNy40Ny01LjgxYy0yLjA2IDEuMTEtNC43MiAxLjc3LTcuNDcgMS43Ny05LjUzIDAtMTAuMTMtMy43NC0xMS44LTguNzlMLjY0IDM0LjhDMy4zMiA0Mi4zIDExLjU0IDQ4IDI0IDQ4eiIvPjxwYXRoIGZpbGw9Im5vbmUiIGQ9Ik0wIDBoNDh2NDhoLTQ4eiIvPjwvc3ZnPg==" 
-                      className="w-5 h-5" 
+                      className="w-6 h-6" 
                       alt="Google" 
                     />
-                    Continue with Google
+                    Sign In with Google
                   </motion.button>
 
                   <button 
@@ -2555,7 +2547,7 @@ function App() {
                                   {saved.name[0]}
                                 </div>
                               )}
-                              {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 12000 && (
+                              {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 70000 && (
                                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
                               )}
                             </div>
@@ -2613,7 +2605,7 @@ function App() {
                                   <Heart size={20} className="md:w-6 md:h-6" fill="currentColor" />
                                 </div>
                               )}
-                              {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 12000 && (
+                              {saved.lastSeen?.toMillis && saved.lastSeen.toMillis() > Date.now() - 70000 && (
                                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
                               )}
                             </div>
@@ -2809,6 +2801,27 @@ function App() {
                       <div className="p-3 sm:p-4 bg-[#FFF5F5] rounded-2xl font-mono text-[10px] break-all select-all border border-[#FFD7D7] opacity-60">{user.uid}</div>
                     </div>
 
+                    {user.isAnonymous && (
+                      <div className="space-y-3 pt-2">
+                        <label className="text-[10px] font-sans font-bold uppercase tracking-widest text-[#8C8970]">Account</label>
+                        <motion.button 
+                          whileTap={{ scale: 0.98 }}
+                          onClick={async () => {
+                            closeSettings();
+                            logout();
+                          }}
+                          className="w-full py-4 bg-white border-2 border-[#FFD7D7] text-[#4A4A3A] rounded-2xl flex items-center justify-center gap-3 font-sans font-bold tracking-widest uppercase text-xs hover:border-[#E86B6B] transition-all shadow-sm"
+                        >
+                          <img 
+                            src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCIgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4Ij48cGF0aCBmaWxsPSIjRUE0MzM1IiBkPSJNMjQgOS41YzMuNTQgMCA2LjczIDEuMjIgOS4yMyAzLjU4bDYuOTEtNi45MUMzNS40MyAyLjQ3IDMwLjI0IDAgMjQgMEMxNC45OSAwIDcuNDEgNS43IDQuNTQgMTMuOTdsNy40NyA1LjgxQzEzLjg3IDEyLjMzIDE4LjQ3IDkuNSAyNCA5LjV6Ii8+PHBhdGggZmlsbD0iIzQyODVGNCIgZD0iTTQ2Ljk4IDI0LjU1YzAgLTEuNjEtLjE0LTMuMTctLjM5LTQuNTVIMjR2OS4wMmgxMi45NGMtLjU2IDIuOTYtMi4yNiA1LjQ4LTQuNzcgNy4xOGw3LjQ3IDUuODFjNC4zOC00LjA1IDYuOTItNC4wNSA2LjkyLTE3LjQ2eiIvPjxwYXRoIGZpbGw9IiNGQkJDMDQiIGQ9Ik0xMC41MyAyOC41OWMtLjQ4LTEuNDEtLjc2LTIuOTEtLjc2LTQuNDVzLjI4LTMuMDQuNzYtNC40NWwtNy40Ny01LjgxQy42NCAxNy45MSAwIDIwLjkxIDAgMjRzLjY0IDYuMDkgMi4zMiA5LjIybDcuNTYtNS42MnoiLz48cGF0aCBmaWxsPSIjMzRBODUzIiBkPSJNMjQgNDhjNi40OCAwIDExLjkzLTIuMTMgMTUuODktNS44MWwtNy40Ny01LjgxYy0yLjA2IDEuMTEtNC43MiAxLjc3LTcuNDcgMS43Ny05LjUzIDAtMTAuMTMtMy43NC0xMS44LTguNzlMLjY0IDM0LjhDMy4zMiA0Mi4zIDExLjU0IDQ4IDI0IDQ4eiIvPjxwYXRoIGZpbGw9Im5vbmUiIGQ9Ik0wIDBoNDh2NDhoLTQ4eiIvPjwvc3ZnPg==" 
+                            className="w-5 h-5" 
+                            alt="Google" 
+                          />
+                          Sign In with Google
+                        </motion.button>
+                      </div>
+                    )}
+
                     <div className="space-y-3 pt-2">
                       <label className="text-[10px] font-sans font-bold uppercase tracking-widest text-[#8C8970]">Support & Community</label>
                       <div className="grid grid-cols-2 gap-2">
@@ -2919,7 +2932,7 @@ function App() {
                           {selectedChatUser.name[0]}
                         </div>
                       )}
-                      {selectedChatUser.lastSeen?.toMillis && selectedChatUser.lastSeen.toMillis() > Date.now() - 12000 && (
+                      {selectedChatUser.lastSeen?.toMillis && selectedChatUser.lastSeen.toMillis() > Date.now() - 70000 && (
                         <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
                       )}
                     </div>
