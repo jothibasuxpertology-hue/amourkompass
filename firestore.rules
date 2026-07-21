@@ -92,14 +92,19 @@ service cloud.firestore {
              data.country is string && data.gender is string &&
              data.age is number && data.age >= 16 && data.age <= 120 &&
              data.zodiac is string && data.targetCountry is string &&
-             data.lastSeen is timestamp &&
+             (data.lastSeen == null || data.lastSeen is timestamp) &&
              (data.get('username', null) == null || isValidUsername(data.username)) &&
              (data.get('heading', 0) is number) &&
              isValidLocation(data.get('location', null)) &&
              (data.get('relationshipType', 'friend') in ['friend', 'love']) &&
              (data.get('lookingForLove', false) is bool) &&
              (data.get('friends', []) is list) &&
-             (data.get('loves', []) is list);
+             (data.get('loves', []) is list) &&
+             (data.get('friendId', null) == null || data.friendId is string) &&
+             (data.get('profilePic', null) == null || data.profilePic is string) &&
+             (data.get('bio', null) == null || data.bio is string) &&
+             (data.get('language', null) == null || data.language is string) &&
+             (data.get('isAnonymous', null) == null || data.isAnonymous is bool);
     }
 
     match /users/{userId} {
