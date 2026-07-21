@@ -1765,7 +1765,7 @@ function App() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="relative z-10 space-y-12 max-w-lg"
+            className="relative z-10 space-y-12 max-w-lg flex flex-col items-center"
           >
             <div className="space-y-4">
               <motion.h1 
@@ -1777,20 +1777,49 @@ function App() {
               </motion.h1>
             </div>
 
-            <motion.button
-              whileHover={{ scale: 1.05, boxShadow: "0 0 25px rgba(232, 107, 107, 0.3)" }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                setShowWelcome(false);
-                setShowOnboarding(true);
-              }}
-              className="group relative px-12 py-5 bg-[#E86B6B] text-white rounded-full font-sans font-bold tracking-[0.2em] uppercase text-sm shadow-2xl overflow-hidden"
-            >
-              <span className="relative z-10 flex items-center gap-3">
-                Let's find your soulmate ✨
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-            </motion.button>
+            <div className="space-y-4 flex flex-col items-center w-full">
+              <motion.button
+                whileHover={{ scale: 1.05, boxShadow: "0 0 25px rgba(232, 107, 107, 0.3)" }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  setShowWelcome(false);
+                  setShowOnboarding(true);
+                }}
+                className="group relative px-12 py-5 bg-[#E86B6B] text-white rounded-full font-sans font-bold tracking-[0.2em] uppercase text-sm shadow-2xl overflow-hidden w-full max-w-sm"
+              >
+                <span className="relative z-10 flex items-center justify-center gap-3">
+                  Let's find your soulmate ✨
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              </motion.button>
+
+              {user?.isAnonymous && (
+                <div className="w-full max-w-sm pt-4 border-t border-[#D4A373]/20 space-y-3">
+                  <p className="text-[10px] font-bold text-[#8C8970] uppercase tracking-widest mb-2">Or connect your account</p>
+                  <motion.button 
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleLogin}
+                    disabled={isAuthLoading}
+                    className="w-full py-4 bg-white border-2 border-[#FFD7D7] text-[#4A4A3A] rounded-2xl flex items-center justify-center gap-3 font-sans font-bold tracking-widest uppercase text-xs hover:border-[#E86B6B] transition-all shadow-md"
+                  >
+                    <img 
+                      src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCIgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4Ij48cGF0aCBmaWxsPSIjRUE0MzM1IiBkPSJNMjQgOS41YzMuNTQgMCA2LjczIDEuMjIgOS4yMyAzLjU4bDYuOTEtNi45MUMzNS40MyAyLjQ3IDMwLjI0IDAgMjQgMEMxNC45OSAwIDcuNDEgNS43IDQuNTQgMTMuOTdsNy40NyA1LjgxQzEzLjg3IDEyLjMzIDE4LjQ3IDkuNSAyNCA5LjV6Ii8+PHBhdGggZmlsbD0iIzQyODVGNCIgZD0iTTQ2Ljk4IDI0LjU1YzAgLTEuNjEtLjE0LTMuMTctLjM5LTQuNTVIMjR2OS4wMmgxMi45NGMtLjU2IDIuOTYtMi4yNiA1LjQ4LTQuNzcgNy4xOGw3LjQ3IDUuODFjNC4zOC00LjA1IDYuOTItNC4wNSA2LjkyLTE3LjQ2eiIvPjxwYXRoIGZpbGw9IiNGQkJDMDQiIGQ9Ik0xMC41MyAyOC41OWMtLjQ4LTEuNDEtLjc2LTIuOTEtLjc2LTQuNDVzLjI4LTMuMDQuNzYtNC40NWwtNy40Ny01LjgxQy42NCAxNy45MSAwIDIwLjkxIDAgMjRzLjY0IDYuMDkgMi4zMiA5LjIybDcuNTYtNS42MnoiLz48cGF0aCBmaWxsPSIjMzRBODUzIiBkPSJNMjQgNDhjNi40OCAwIDExLjkzLTIuMTMgMTUuODktNS44MWwtNy40Ny01LjgxYy0yLjA2IDEuMTEtNC43MiAxLjc3LTcuNDcgMS43Ny05LjUzIDAtMTAuMTMtMy43NC0xMS44LTguNzlMLjY0IDM0LjhDMy4zMiA0Mi4zIDExLjU0IDQ4IDI0IDQ4eiIvPjxwYXRoIGZpbGw9Im5vbmUiIGQ9Ik0wIDBoNDh2NDhoLTQ4eiIvPjwvc3ZnPg==" 
+                      className="w-5 h-5" 
+                      alt="Google" 
+                    />
+                    Sign In with Google
+                  </motion.button>
+                  <button 
+                    onClick={() => { logout(); }}
+                    disabled={isAuthLoading}
+                    className="w-full py-3 bg-[#FFF5F5] border border-[#FFD7D7] text-[#8C8970] rounded-xl flex items-center justify-center gap-2 font-sans font-bold tracking-widest uppercase text-[10px] hover:bg-white transition-all shadow-sm"
+                  >
+                    <Mail size={14} />
+                    Other Options
+                  </button>
+                </div>
+              )}
+            </div>
           </motion.div>
 
           {/* Gold Accent Lines */}
